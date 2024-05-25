@@ -1,5 +1,7 @@
 # Purpose: Create a video from the events of a csv file.
-# WARNING: In this version (v1) the framelengths are slightly wrong!
+
+# WARNING: DO NOT USE THIS VERSION ANYMORE! 
+# In this version (v1) the framelengths are slightly wrong!
 
 import csv
 import cv2

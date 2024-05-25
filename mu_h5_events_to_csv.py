@@ -13,9 +13,11 @@ def getDateTimeStr():
 width = 1280
 height = 720
 
+# TODO scan dir for files
 filename = "1_l-l-l"
 # filename = "3_m-h-h"
 events_filepath = f"../../datasets/muenster_dataset/wacv2024_ictrap_dataset/{filename}.h5"
+# FIXME use a different output dir!
 csv_filepath = f"{filename}_{getDateTimeStr()}.csv"
 
 t_factor = 0.001

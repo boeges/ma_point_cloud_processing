@@ -44,10 +44,10 @@ if __name__ == "__main__":
         print("Processing video", filename, "...")
 
         # labels_filepath = f"output/{filename}_annotation_instances.csv"
-        labels_filepath = f"output/csv_to_video/{filename}_60fps_dvs_annotation_header.txt"
+        labels_filepath = f"output/mu_frame_labels_with_ids/{filename}_60fps_dvs_annotation_header.txt"
         # input_video_path = f"../../datasets/muenster_dataset/wacv2024_ictrap_dataset/{filename}_dvs.mp4"
         input_video_path = f"output/csv_to_video/{filename}_60fps_dvs.mp4"
-        output_video_path = f"output/csv_to_video/{filename}_dvs_bb_instances.mp4"
+        output_video_path = f"output/videos_with_bbs/{filename}_dvs_bb_instances.mp4"
 
         # For text
         font = cv2.FONT_HERSHEY_SIMPLEX

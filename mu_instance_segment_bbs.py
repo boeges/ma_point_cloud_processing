@@ -26,7 +26,7 @@ for filename in filenames:
     # filename = "1_l-l-l"
 
     input_csv_filepath = f"../../datasets/muenster_dataset/wacv2024_ictrap_dataset/{filename}_annotation.csv"
-    output_csv_filepath = f"output/{filename}_annotation_instances.csv"
+    output_csv_filepath = f"output/mu_frame_labels_with_ids/{filename}_annotation_instances.csv"
 
     highest_used_id = -1
     last_frame_index = "-1"

@@ -1,4 +1,7 @@
-# Funktioniert nicht!
+
+
+# FUNKTIONIERT NICHT!!!
+
 
 import csv
 import math
@@ -33,8 +36,8 @@ if __name__ == "__main__":
     for filename in filenames:
         print("Processing label file", filename, "...")
 
-        input_labels_filepath = f"output/csv_to_video/{filename}_60fps_dvs_annotation.txt"
-        output_labels_filepath = f"output/csv_to_video/{filename}_60fps_dvs_annotation.corrected.txt"
+        input_labels_filepath = f"output/video_annotations/{filename}_60fps_dvs_annotation.txt"
+        output_labels_filepath = f"output/video_annotations/{filename}_60fps_dvs_annotation.corrected.txt"
 
         with open(input_labels_filepath, 'r') as input_labels_file, open(output_labels_filepath, 'w', newline='') as output_labels_file:
             # Read bboxes

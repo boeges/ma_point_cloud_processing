@@ -112,10 +112,10 @@ if __name__ == "__main__":
         print("Processing file:", filename)
 
         events_filepath = f"../../datasets/Insektenklassifikation/{filename}.csv"
-        labels_filepath = f"output/csv_to_video/{filename}_60fps_dvs_annotation.sep.txt"
-        output_base_dir = "output/"
+        labels_filepath = f"output/video_annotations/{filename}_60fps_dvs_annotation.sep.txt"
+        output_base_dir = "output/extracted_trajectories"
 
-        frametimes_filepath = f"output/csv_to_video/{filename}_60fps_dvs_frametimes_v1.csv"
+        frametimes_filepath = f"output/video_frametimes/{filename}_60fps_dvs_frametimes_v1.csv"
         frametimes = []
 
         if READ_FRAMETIMES_FROM_FILE:

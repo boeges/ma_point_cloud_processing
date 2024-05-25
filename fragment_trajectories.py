@@ -24,7 +24,7 @@ if __name__ == "__main__":
     SAVE_PARTIAL_TRAJECTORIES = True
     MIN_FILE_SIZE_BYTES = 100 * 1024 # 100KB
 
-    CSV_BASE_DIR = Path("output")
+    CSV_BASE_DIR = Path("output/extracted_trajectories")
 
     scenes = [
         # "1_l-l-l",

@@ -27,8 +27,8 @@ if __name__ == "__main__":
     for filename in filenames:
         print("Processing label file", filename, "...")
 
-        input_labels_filepath = f"output/csv_to_video/{filename}_60fps_dvs_annotation.txt"
-        output_labels_filepath = f"output/csv_to_video/{filename}_60fps_dvs_annotation.sep.txt"
+        input_labels_filepath = f"output/video_annotations/{filename}_60fps_dvs_annotation.txt"
+        output_labels_filepath = f"output/video_annotations/{filename}_60fps_dvs_annotation.sep.txt"
 
         assigned_ids = set()
         max_id = 0
