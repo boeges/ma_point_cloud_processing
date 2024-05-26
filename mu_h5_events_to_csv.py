@@ -1,48 +1,61 @@
-# Wandelt gesamte Punktwolkenmenge in CSV um. (Nicht einzelne Bahnen).
+# Wandelt die gesamte Punktwolkenmenge aus der H5 in eine CSV um. (Nicht einzelne Bahnen).
 
-import cv2
 import csv
 import h5py
-import numpy as np
+from pathlib import Path
 from datetime import datetime
-import matplotlib.pyplot as plt
 
 def getDateTimeStr():
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-width = 1280
-height = 720
 
-# TODO scan dir for files
-filename = "1_l-l-l"
-# filename = "3_m-h-h"
-events_filepath = f"../../datasets/muenster_dataset/wacv2024_ictrap_dataset/{filename}.h5"
-# FIXME use a different output dir!
-csv_filepath = f"{filename}_{getDateTimeStr()}.csv"
+############################ MAIN ##################################
+if __name__ == "__main__":
+    WIDTH = 1280
+    HEIGHT = 720
 
-t_factor = 0.001
+    # Must be an integer! e.g. 1 or 10
+    PRINT_PROGRESS_EVERY_N_PERCENT = 1
 
-data = [
-    ['x', 'y', 't', "is_insect"]
-]
+    H5_DIR = Path("../../datasets/muenster_dataset/wacv2024_ictrap_dataset")
+    CSV_OUTPUT_DIR = Path("output/mu_h5_to_csv")
+
+    # Find all csv files in CSV_DIR
+    h5_filepaths = [file for file in H5_DIR.iterdir() if (file.is_file() and file.name.endswith(".h5"))]
+    print(f"Found {len(h5_filepaths)} h5 files")
+
+    for h5_filepath in h5_filepaths:
+        filestem = h5_filepath.name.replace(".h5", "")
+        csv_filepath = CSV_OUTPUT_DIR / f"{filestem}.csv"
+
+        t_factor = 1
+
+        # event zB (133, 716, 1, 1475064)
+        with h5py.File(h5_filepath, "r") as h5_file, open(csv_filepath, 'w', newline='') as csv_file:
+            events = h5_file["CD/events"]
+            first_timestamp = events[0][3]
+
+            writer = csv.writer(csv_file)
+            writer.writerow(['x', 'y', 't', 'p'])
+
+            event_count = len(events)
+            last_progress_percent = 0
+
+            print(f"Processing file: {h5_filepath.name} with {event_count} events")
+            print("Progress (%): ", end="")
+            for i, event in enumerate(events):
+                # Write CSV
+                writer.writerow([event[0], event[1], int(float(event[3])*t_factor), event[2]])
+
+                # print progress
+                progress_percent = int(i / event_count * 100)
+                if progress_percent >= last_progress_percent + PRINT_PROGRESS_EVERY_N_PERCENT:
+                    last_progress_percent = progress_percent
+                    print(progress_percent, ", ", sep="", end="")
+
+                # if first_timestamp+1000*1000*2 < event[3]:
+                #     # stop after x sec
+                #     break
 
 
-# event zB (133, 716, 1, 1475064)
-with h5py.File(events_filepath, "r") as f:
-    events = f["CD/events"]
-    first_timestamp = events[0][3]
-
-    for event in events:
-        if first_timestamp+1000*1000*2 < event[3]:
-            # stop after x sec
-            break
-
-        data.append([event[0], event[1], int(float(event[3])*t_factor)])
-
-
-# Write CSV
-with open(csv_filepath, 'w', newline='') as file:
-    writer = csv.writer(file)
-    writer.writerows(data)
-
-print(f"Created {csv_filepath}!")
+        print(f"Created {csv_filepath}!")

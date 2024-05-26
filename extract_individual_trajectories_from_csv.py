@@ -2,7 +2,7 @@
 # For each path create a separate csv file containing the (x, y, t)-Points.
 
 # Format for events: (x, y, t_in_us_or_ms, p)
-# Format from DarkLabel software: (frame_index, classname, instance_id, is_difficult, x, y, w, h) 
+# Format for Labels from DarkLabel software: (frame_index, classname, instance_id, is_difficult, x, y, w, h) 
 
 import csv
 from datetime import datetime
@@ -40,36 +40,7 @@ def getDateTimeStr():
 
 ############################ MAIN ##################################
 if __name__ == "__main__":
-    datetime_str = getDateTimeStr()
-
-    WIDTH = 1280
-    HEIGHT = 720
-    FPS = 60
-    # Precision of the timestamp: for mikroseconds: 1000000, for milliseconds: 1000
-    TIMESTEPS_PER_SECOND = 1_000_000
-    # If timestamp in mikroseconds: -> mikroseconds per frame
-    TIMESTEPS_PER_FRAME = (1 / FPS) * TIMESTEPS_PER_SECOND
-    HALF_FRAME_TIME = TIMESTEPS_PER_FRAME // 2
-    T_SCALE = 0.002 # 0.002 is good
-    EVENTS_CSV_HAS_HEADER = False
-    LABELS_CSV_HAS_HEADER = False
-
-    # Format for events: (x, y, t (us or ms), p)
-    EVENTS_CSV_X_COL = 0
-    EVENTS_CSV_Y_COL = 1
-    EVENTS_CSV_T_COL = 2
-    EVENTS_CSV_P_COL = 3
-
-    #                                      0            1          2            3         4  5  6  7
-    # Format from DarkLabel software: (frame_index, classname, instance_id, is_difficult, x, y, w, h) 
-    LABELS_CSV_FRAME_COL = 0 # frame index
-    LABELS_CSV_CLASS_COL = 1 # class name
-    LABELS_CSV_ID_COL = 2 # instance id
-    LABELS_CSV_IS_CONFIDENT_COL = 3 # frame index
-    LABELS_CSV_X_COL = 4
-    LABELS_CSV_Y_COL = 5
-    LABELS_CSV_W_COL = 6
-    LABELS_CSV_H_COL = 7
+    DATETIME_STR = getDateTimeStr()
 
     PRINT_PROGRESS_EVERY_N_PERCENT = 1
 
@@ -92,33 +63,129 @@ if __name__ == "__main__":
     SUBFRAME_COUNT = 0
     CREATE_BBOX_EVENTS = True
     ADD_TIME_TO_FILENAME = True
+
     READ_FRAMETIMES_FROM_FILE = True
     FRAMETIMES_FILE_HAS_HEADER = True
+    FRAMETIMES_CSV_DIR = None # Overwrite this with a path if used!
 
+   ############### PF #############
+    # FPS = 60
 
-    filenames = [
+    # Format from DarkLabel software: (frame_index, classname, instance_id, is_difficult, x, y, w, h) 
+    #                                      0            1          2            3         4  5  6  7
+    # LABELS_CSV_FRAME_COL = 0 # frame index
+    # LABELS_CSV_CLASS_COL = 1 # class name
+    # LABELS_CSV_ID_COL = 2 # instance id
+    # LABELS_CSV_IS_CONFIDENT_COL = 3
+    # LABELS_CSV_X_COL = 4
+    # LABELS_CSV_Y_COL = 5
+    # LABELS_CSV_W_COL = 6
+    # LABELS_CSV_H_COL = 7
+    # BB_IS_CERTAIN_WHEN_MATCHES = "0" # is_difficult: 0(=confident)/1(=difficult)
+
+    # Format for events: (x, y, t (us or ms), p)
+    # EVENTS_CSV_X_COL = 0
+    # EVENTS_CSV_Y_COL = 1
+    # EVENTS_CSV_T_COL = 2
+    # EVENTS_CSV_P_COL = 3
+
+    # Paths
+    # EVENTS_CSV_DIR = Path("../../datasets/Insektenklassifikation")
+    # EVENTS_CSV_FILENAME = "{filestem:.2f}.csv"
+    # LABELS_CSV_DIR = Path("output/video_annotations")
+    # LABELS_CSV_FILENAME = "{filestem:.2f}_60fps_dvs_annotation.sep.txt"
+    # OUTPUT_BASE_DIR = Path("output/extracted_trajectories")
+    # FRAMETIMES_CSV_DIR = Path("output/video_frametimes")
+    # FRAMETIMES_CSV_FILENAME = "{filestem}_60fps_dvs_frametimes_v1.csv"
+
+    # EVENTS_CSV_HAS_HEADER = False
+    # LABELS_CSV_HAS_HEADER = False
+
+    ##################################
+
+    ############### MU #############
+    FPS = 100
+
+    # Format from Muenster dateset:   (frame_index, is_keyframe, class, confidence, left, top, width, height, center_x, center_y, instance_id) 
+    #                                      0             1         2         3       4     5     6      7        8         9           10
+    LABELS_CSV_FRAME_COL = 0 # frame index
+    LABELS_CSV_CLASS_COL = 2 # class name
+    LABELS_CSV_ID_COL = 10 # instance id
+    LABELS_CSV_IS_CONFIDENT_COL = 3
+    LABELS_CSV_X_COL = 4
+    LABELS_CSV_Y_COL = 5
+    LABELS_CSV_W_COL = 6
+    LABELS_CSV_H_COL = 7
+    BB_IS_CONFIDENT_WHEN_MATCHES = "certain"
+
+    # Format for events: (x, y, t (us), p)
+    EVENTS_CSV_X_COL = 0
+    EVENTS_CSV_Y_COL = 1
+    EVENTS_CSV_T_COL = 2
+    EVENTS_CSV_P_COL = 3
+
+    # Paths
+    EVENTS_CSV_DIR = Path("output/mu_h5_to_csv")
+    EVENTS_CSV_FILENAME = "{filestem}.csv"
+    LABELS_CSV_DIR = Path("output/mu_frame_labels_with_ids")
+    LABELS_CSV_FILENAME = "{filestem}_annotation_instances.csv"
+    OUTPUT_BASE_DIR = Path("output/extracted_trajectories")
+    FRAMETIMES_CSV_DIR = Path("output/mu_h5_frametimes_to_csv")
+    FRAMETIMES_CSV_FILENAME = "{filestem}_frametimes.csv"
+
+    EVENTS_CSV_HAS_HEADER = True
+    LABELS_CSV_HAS_HEADER = True
+
+    ##################################
+
+    WIDTH = 1280
+    HEIGHT = 720
+    # Precision of the timestamp: for mikroseconds: 1000000, for milliseconds: 1000
+    TIMESTEPS_PER_SECOND = 1_000_000
+    # If timestamp in mikroseconds: -> mikroseconds per frame
+    TIMESTEPS_PER_FRAME = (1 / FPS) * TIMESTEPS_PER_SECOND
+    HALF_FRAME_TIME = TIMESTEPS_PER_FRAME // 2
+    T_SCALE = 0.002 # 0.002 is good
+    
+
+    # Find all csv files in EVENTS_CSV_DIR
+    events_filepaths = [file for file in EVENTS_CSV_DIR.iterdir() if (file.is_file() and file.name.endswith(".csv"))]
+    print(f"Found {len(events_filepaths)} csv files containing events")
+
+    filestems = [
+        # PF
         # "hauptsächlichBienen1",
         # "hauptsächlichBienen2",
         # "libellen1",
         # "libellen2",
         # "libellen3",
         # "vieleSchmetterlinge1",
-        "vieleSchmetterlinge2",
+        # "vieleSchmetterlinge2",
+        # MU
+        "1_l-l-l",
+        # "2_l-h-l",
+        # "3_m-h-h",
+        # "4_m-m-h",
+        # "5_h-l-h",
+        # "6_h-h-h_filtered",
     ]
 
     print("Using t-scale:", T_SCALE)
 
-    for filename in filenames:
-        print("Processing file:", filename)
+    for events_filepath in events_filepaths:
+        filestem = events_filepath.name.replace(".csv", "")
+        labels_filepath = LABELS_CSV_DIR / LABELS_CSV_FILENAME.format(filestem=filestem)
 
-        events_filepath = f"../../datasets/Insektenklassifikation/{filename}.csv"
-        labels_filepath = f"output/video_annotations/{filename}_60fps_dvs_annotation.sep.txt"
-        output_base_dir = "output/extracted_trajectories"
+        if len(filestems) > 0 and filestem not in filestems:
+            print("Skipping file:", filestem)
+            continue
 
-        frametimes_filepath = f"output/video_frametimes/{filename}_60fps_dvs_frametimes_v1.csv"
+        print("Processing file:", filestem)
+
+        # Read frametimes from csv
         frametimes = []
-
         if READ_FRAMETIMES_FROM_FILE:
+            frametimes_filepath = FRAMETIMES_CSV_DIR / FRAMETIMES_CSV_FILENAME.format(filestem=filestem)
             with open(frametimes_filepath, 'r') as frametimes_file:
                 frametimes_reader = csv.reader(frametimes_file)
 
@@ -139,6 +206,9 @@ if __name__ == "__main__":
 
         frame_time = 0
         frame_index = 0
+
+        # Find unique instance ids
+        instance_ids = set()
         
         with open(labels_filepath, 'r') as labels_file, open(events_filepath, 'r') as events_file:
             # Read labels
@@ -147,14 +217,11 @@ if __name__ == "__main__":
                 labels_row = next(labels_reader, None)
             labels_row = next(labels_reader, None)
 
-            print("Finding timestamps and bboxes for frames...")
+            print("Finding timestamps, bboxes for frames and unique instance ids")
+
 
             while labels_row is not None:
-                if READ_FRAMETIMES_FROM_FILE:
-                    corrected_frame_time = frametimes[frame_index]
-                else:
-                    corrected_frame_time = frame_time + FRAME_TIME_OFFSET
-
+                corrected_frame_time = frametimes[frame_index] if READ_FRAMETIMES_FROM_FILE else (frame_time + FRAME_TIME_OFFSET)
                 frame = Frame(corrected_frame_time, frame_index)
                 frames.append(frame)
 
@@ -168,16 +235,18 @@ if __name__ == "__main__":
                     if label_frame_index == frame_index:
                         # If label frame index matches video frame index:
                         # Add bbox to frame bboxes
-                        # row format (frame_index, classname, instance_id, is_difficult, x, y, w, h) 
+                        # row format (frame_index, classname, instance_id, is_difficult, x, y, w, h)
+                        instance_id = int(labels_row[LABELS_CSV_ID_COL])
                         label = Label(
                             int(float(labels_row[LABELS_CSV_X_COL])),
                             int(float(labels_row[LABELS_CSV_Y_COL])),
                             int(float(labels_row[LABELS_CSV_W_COL])),
                             int(float(labels_row[LABELS_CSV_H_COL])),
-                            int(labels_row[LABELS_CSV_ID_COL]),
-                            int(labels_row[LABELS_CSV_IS_CONFIDENT_COL]) == 0
+                            instance_id,
+                            labels_row[LABELS_CSV_IS_CONFIDENT_COL] == BB_IS_CONFIDENT_WHEN_MATCHES
                         )
-                        frame.labels[int(labels_row[LABELS_CSV_ID_COL])] = label
+                        frame.labels[instance_id] = label
+                        instance_ids.add(instance_id)
                     else:
                         # label_frame_index < current_frame_index
                         # Iterate until matching frame has been found
@@ -247,12 +316,14 @@ if __name__ == "__main__":
             # store all events for each instance
             # { <instance_id>: InstanceEvents{ first_timestamp, events:[ (x, y, t, is_confident, r, g, b), ... ] }
             trajectories = {}
+            for id in instance_ids:
+                trajectories[id] = InstanceTrajectory()
 
             # Find total row count for tracking progress
             print("Scanning events CSV file to find total row count...")
             event_row_count = sum(1 for _ in events_file)
-            
-            # Iterate events file
+
+            # Reader for events file
             events_file.seek(0)
             event_reader = csv.reader(events_file)
             if EVENTS_CSV_HAS_HEADER:
@@ -305,14 +376,15 @@ if __name__ == "__main__":
                     # event is in previous frame
                     # is event in a bbox?
                     for instance_id,label in prev_frame.labels.items():
+                        # get trajectory for this instance
+                        instance_trajectory = trajectories[instance_id]
+
                         if event_x >= label.left and \
                                 event_x < label.left + label.width and \
                                 event_y >= label.top and \
                                 event_y < label.top + label.height:
                             # -> event is in this bbox
-
-                            # create or get events for this instance
-                            instance_trajectory = trajectories.setdefault(instance_id, InstanceTrajectory())
+                            
                             if instance_trajectory.first_timestamp is None:
                                 instance_trajectory.first_timestamp = event_timestamp
 
@@ -320,33 +392,34 @@ if __name__ == "__main__":
                             event_z = (event_timestamp - instance_trajectory.first_timestamp) * T_SCALE
                             is_confident = 1 if label.is_confident else 0
                             event_color = EVENT_COLOR if label.is_confident else UNCONFIDENT_COLOR
-                            instance_trajectory.events.append( (event_x, event_y, event_z, is_confident, *event_color) )
+                            instance_trajectory.events.append( (event_x, event_y, event_z, *event_color, is_confident) )
 
-                            if CREATE_BBOX_EVENTS:
-                                # DEBUG: Add pints of bbox
-                                # at start of frame
-                                points_color = BBOX_COLORS[label._current_bb_index % 3]
+                        # Draw bbox even if there are no events in it! (Dont inlcude it in previous IF)
+                        if CREATE_BBOX_EVENTS and instance_trajectory.first_timestamp is not None:
+                            # DEBUG: Add pints of bbox
+                            points_color = BBOX_COLORS[label._current_bb_index % 3]
+                            is_confident = 0
 
-                                frame_start = ((prev_frame.start - instance_trajectory.first_timestamp) * T_SCALE)
-                                instance_trajectory.events.append( (label.left, label.top, frame_start, is_confident, *points_color) )
-                                instance_trajectory.events.append( (label.left+label.width, label.top, frame_start, is_confident, *points_color) )
-                                instance_trajectory.events.append( (label.left, label.top+label.height, frame_start, is_confident, *points_color) )
-                                instance_trajectory.events.append( (label.left+label.width, label.top+label.height, frame_start, is_confident, *points_color) )
-                                # at end of frame (start of next frame)
-                                frame_end = ((frame.start - instance_trajectory.first_timestamp) * T_SCALE)
-                                instance_trajectory.events.append( (label.left, label.top, frame_end, is_confident, *points_color) )
-                                instance_trajectory.events.append( (label.left+label.width, label.top, frame_end,is_confident, *points_color) )
-                                instance_trajectory.events.append( (label.left, label.top+label.height, frame_end, is_confident, *points_color) )
-                                instance_trajectory.events.append( (label.left+label.width, label.top+label.height, frame_end, is_confident, *points_color) )
+                            # at start of frame
+                            frame_start = ((prev_frame.start - instance_trajectory.first_timestamp) * T_SCALE)
+                            instance_trajectory.events.append( (label.left, label.top, frame_start, *points_color, is_confident) )
+                            instance_trajectory.events.append( (label.left+label.width, label.top, frame_start, *points_color, is_confident) )
+                            instance_trajectory.events.append( (label.left, label.top+label.height, frame_start, *points_color, is_confident) )
+                            instance_trajectory.events.append( (label.left+label.width, label.top+label.height, frame_start, *points_color, is_confident) )
+                            # at end of frame (start of next frame)
+                            frame_end = ((frame.start - instance_trajectory.first_timestamp) * T_SCALE)
+                            instance_trajectory.events.append( (label.left, label.top, frame_end, *points_color, is_confident) )
+                            instance_trajectory.events.append( (label.left+label.width, label.top, frame_end,*points_color, is_confident) )
+                            instance_trajectory.events.append( (label.left, label.top+label.height, frame_end, *points_color, is_confident) )
+                            instance_trajectory.events.append( (label.left+label.width, label.top+label.height, frame_end, *points_color, is_confident) )
 
-                                label._current_bb_index += 1
+                            label._current_bb_index += 1
 
                     event_row = next(event_reader, None)
 
                 prev_frame = frame
 
             # print debug stuff
-            print("Finished assigning events")
             print("Number of instance trajectories:", len(trajectories))
             for id, trajectory in trajectories.items():
                 print("trajectory", id, "has", len(trajectory.events), "events and starts at t =", trajectory.first_timestamp)
@@ -361,16 +434,16 @@ if __name__ == "__main__":
                     continue
                 
                 bbox_filename_part = "_bbox" if CREATE_BBOX_EVENTS else ""
-                datetime_filename_part = ("_"+datetime_str) if ADD_TIME_TO_FILENAME else ""
+                datetime_filename_part = ("_"+DATETIME_STR) if ADD_TIME_TO_FILENAME else ""
 
-                output_dir_path = Path(output_base_dir) / f"{filename}_trajectories{bbox_filename_part}{datetime_filename_part}"
+                output_dir_path = OUTPUT_BASE_DIR / f"{filestem}_trajectories{bbox_filename_part}{datetime_filename_part}"
                 output_dir_path.mkdir(parents=True, exist_ok=True)
 
                 output_file_path = output_dir_path / f"{id}.csv"
 
                 with open(output_file_path, 'w', newline='') as file:
                     writer = csv.writer(file)
-                    writer.writerow(["x", "y", "t", "is_confident", "r", "g", "b"])
+                    writer.writerow(["x", "y", "t", "r", "g", "b", "is_confident"])
                     writer.writerows(trajectory.events)
 
                 print(f"Created {output_file_path}!")

@@ -1,3 +1,5 @@
+# Purpose: Add instance ids to the annotation.csv files from the Münster Dataset.
+
 import csv
 import math
 

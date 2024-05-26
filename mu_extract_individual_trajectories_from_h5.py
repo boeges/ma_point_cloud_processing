@@ -1,6 +1,9 @@
 # Purpose: Extract individual insect flight paths.
 # For each path create a separate csv file containing the (x, y, t)-Points.
 
+# DEPRECATED!
+# Use mu_h5_events_to_csv.py, mu_h5_frametimes_to_csv.py and extract_individual_trajectories_from_csv.py instead!
+
 import csv
 import h5py
 import numpy as np
