@@ -64,77 +64,77 @@ if __name__ == "__main__":
     CREATE_BBOX_EVENTS = True
     ADD_TIME_TO_FILENAME = True
 
-    READ_FRAMETIMES_FROM_FILE = True
+    READ_FRAMETIMES_FROM_FILE = False
     FRAMETIMES_FILE_HAS_HEADER = True
     FRAMETIMES_CSV_DIR = None # Overwrite this with a path if used!
 
    ############### PF #############
-    # FPS = 60
+    FPS = 60
 
     # Format from DarkLabel software: (frame_index, classname, instance_id, is_difficult, x, y, w, h) 
     #                                      0            1          2            3         4  5  6  7
-    # LABELS_CSV_FRAME_COL = 0 # frame index
-    # LABELS_CSV_CLASS_COL = 1 # class name
-    # LABELS_CSV_ID_COL = 2 # instance id
-    # LABELS_CSV_IS_CONFIDENT_COL = 3
-    # LABELS_CSV_X_COL = 4
-    # LABELS_CSV_Y_COL = 5
-    # LABELS_CSV_W_COL = 6
-    # LABELS_CSV_H_COL = 7
-    # BB_IS_CERTAIN_WHEN_MATCHES = "0" # is_difficult: 0(=confident)/1(=difficult)
-
-    # Format for events: (x, y, t (us or ms), p)
-    # EVENTS_CSV_X_COL = 0
-    # EVENTS_CSV_Y_COL = 1
-    # EVENTS_CSV_T_COL = 2
-    # EVENTS_CSV_P_COL = 3
-
-    # Paths
-    # EVENTS_CSV_DIR = Path("../../datasets/Insektenklassifikation")
-    # EVENTS_CSV_FILENAME = "{filestem:.2f}.csv"
-    # LABELS_CSV_DIR = Path("output/video_annotations")
-    # LABELS_CSV_FILENAME = "{filestem:.2f}_60fps_dvs_annotation.sep.txt"
-    # OUTPUT_BASE_DIR = Path("output/extracted_trajectories")
-    # FRAMETIMES_CSV_DIR = Path("output/video_frametimes")
-    # FRAMETIMES_CSV_FILENAME = "{filestem}_60fps_dvs_frametimes_v1.csv"
-
-    # EVENTS_CSV_HAS_HEADER = False
-    # LABELS_CSV_HAS_HEADER = False
-
-    ##################################
-
-    ############### MU #############
-    FPS = 100
-
-    # Format from Muenster dateset:   (frame_index, is_keyframe, class, confidence, left, top, width, height, center_x, center_y, instance_id) 
-    #                                      0             1         2         3       4     5     6      7        8         9           10
     LABELS_CSV_FRAME_COL = 0 # frame index
-    LABELS_CSV_CLASS_COL = 2 # class name
-    LABELS_CSV_ID_COL = 10 # instance id
+    LABELS_CSV_CLASS_COL = 1 # class name
+    LABELS_CSV_ID_COL = 2 # instance id
     LABELS_CSV_IS_CONFIDENT_COL = 3
     LABELS_CSV_X_COL = 4
     LABELS_CSV_Y_COL = 5
     LABELS_CSV_W_COL = 6
     LABELS_CSV_H_COL = 7
-    BB_IS_CONFIDENT_WHEN_MATCHES = "certain"
+    BB_IS_CONFIDENT_WHEN_MATCHES = "0" # is_difficult: 0(=confident)/1(=difficult)
 
-    # Format for events: (x, y, t (us), p)
+    # Format for events: (x, y, t (us or ms), p)
     EVENTS_CSV_X_COL = 0
     EVENTS_CSV_Y_COL = 1
     EVENTS_CSV_T_COL = 2
     EVENTS_CSV_P_COL = 3
 
     # Paths
-    EVENTS_CSV_DIR = Path("output/mu_h5_to_csv")
+    EVENTS_CSV_DIR = Path("../../datasets/Insektenklassifikation")
     EVENTS_CSV_FILENAME = "{filestem}.csv"
-    LABELS_CSV_DIR = Path("output/mu_frame_labels_with_ids")
-    LABELS_CSV_FILENAME = "{filestem}_annotation_instances.csv"
+    LABELS_CSV_DIR = Path("output/video_annotations")
+    LABELS_CSV_FILENAME = "{filestem}_60fps_dvs_v3.txt"
     OUTPUT_BASE_DIR = Path("output/extracted_trajectories")
-    FRAMETIMES_CSV_DIR = Path("output/mu_h5_frametimes_to_csv")
-    FRAMETIMES_CSV_FILENAME = "{filestem}_frametimes.csv"
+    # FRAMETIMES_CSV_DIR = Path("output/video_frametimes")
+    # FRAMETIMES_CSV_FILENAME = "{filestem}_60fps_dvs_frametimes_v1.csv"
 
-    EVENTS_CSV_HAS_HEADER = True
-    LABELS_CSV_HAS_HEADER = True
+    EVENTS_CSV_HAS_HEADER = False
+    LABELS_CSV_HAS_HEADER = False
+
+    ##################################
+
+    ############### MU #############
+    # FPS = 100
+
+    # Format from Muenster dateset:   (frame_index, is_keyframe, class, confidence, left, top, width, height, center_x, center_y, instance_id) 
+    #                                      0             1         2         3       4     5     6      7        8         9           10
+    # LABELS_CSV_FRAME_COL = 0 # frame index
+    # LABELS_CSV_CLASS_COL = 2 # class name
+    # LABELS_CSV_ID_COL = 10 # instance id
+    # LABELS_CSV_IS_CONFIDENT_COL = 3
+    # LABELS_CSV_X_COL = 4
+    # LABELS_CSV_Y_COL = 5
+    # LABELS_CSV_W_COL = 6
+    # LABELS_CSV_H_COL = 7
+    # BB_IS_CONFIDENT_WHEN_MATCHES = "certain"
+
+    # # Format for events: (x, y, t (us), p)
+    # EVENTS_CSV_X_COL = 0
+    # EVENTS_CSV_Y_COL = 1
+    # EVENTS_CSV_T_COL = 2
+    # EVENTS_CSV_P_COL = 3
+
+    # # Paths
+    # EVENTS_CSV_DIR = Path("output/mu_h5_to_csv")
+    # EVENTS_CSV_FILENAME = "{filestem}.csv"
+    # LABELS_CSV_DIR = Path("output/mu_frame_labels_with_ids")
+    # LABELS_CSV_FILENAME = "{filestem}_annotation_instances.csv"
+    # OUTPUT_BASE_DIR = Path("output/extracted_trajectories")
+    # FRAMETIMES_CSV_DIR = Path("output/mu_h5_frametimes_to_csv")
+    # FRAMETIMES_CSV_FILENAME = "{filestem}_frametimes.csv"
+
+    # EVENTS_CSV_HAS_HEADER = True
+    # LABELS_CSV_HAS_HEADER = True
 
     ##################################
 
@@ -161,8 +161,11 @@ if __name__ == "__main__":
         # "libellen3",
         # "vieleSchmetterlinge1",
         # "vieleSchmetterlinge2",
+        "wespen1",
+        "wespen2",
+        "wespen3",
         # MU
-        "1_l-l-l",
+        # "1_l-l-l",
         # "2_l-h-l",
         # "3_m-h-h",
         # "4_m-m-h",
