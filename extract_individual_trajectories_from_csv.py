@@ -37,7 +37,6 @@ def getDateTimeStr():
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 
-
 ############################ MAIN ##################################
 if __name__ == "__main__":
     DATETIME_STR = getDateTimeStr()
@@ -60,12 +59,10 @@ if __name__ == "__main__":
     # Create subframes between frames with interpolated bboxes
     # 0: No subframes
     # 1: Create one subframe between two real frames (doubles frame count)
-    SUBFRAME_COUNT = 0
-    CREATE_BBOX_EVENTS = True
-    ADD_TIME_TO_FILENAME = True
+    SUBFRAME_COUNT = 1
 
-    READ_FRAMETIMES_FROM_FILE = False
-    FRAMETIMES_FILE_HAS_HEADER = True
+    CREATE_BBOX_EVENTS = False
+    ADD_TIME_TO_FILENAME = True
     FRAMETIMES_CSV_DIR = None # Overwrite this with a path if used!
 
    ############### PF #############
@@ -73,6 +70,7 @@ if __name__ == "__main__":
 
     # Format from DarkLabel software: (frame_index, classname, instance_id, is_difficult, x, y, w, h) 
     #                                      0            1          2            3         4  5  6  7
+    LABELS_CSV_HAS_HEADER = False
     LABELS_CSV_FRAME_COL = 0 # frame index
     LABELS_CSV_CLASS_COL = 1 # class name
     LABELS_CSV_ID_COL = 2 # instance id
@@ -84,30 +82,32 @@ if __name__ == "__main__":
     BB_IS_CONFIDENT_WHEN_MATCHES = "0" # is_difficult: 0(=confident)/1(=difficult)
 
     # Format for events: (x, y, t (us or ms), p)
+    EVENTS_CSV_HAS_HEADER = False
     EVENTS_CSV_X_COL = 0
     EVENTS_CSV_Y_COL = 1
     EVENTS_CSV_T_COL = 2
     EVENTS_CSV_P_COL = 3
 
+    READ_FRAMETIMES_FROM_FILE = True # False for v3 videos and annotations
+    FRAMETIMES_FILE_HAS_HEADER = True
+
     # Paths
     EVENTS_CSV_DIR = Path("../../datasets/Insektenklassifikation")
     EVENTS_CSV_FILENAME = "{filestem}.csv"
     LABELS_CSV_DIR = Path("output/video_annotations")
-    LABELS_CSV_FILENAME = "{filestem}_60fps_dvs_v3.txt"
+    LABELS_CSV_FILENAME = "{filestem}_60fps_dvs_sep.txt"
     OUTPUT_BASE_DIR = Path("output/extracted_trajectories")
-    # FRAMETIMES_CSV_DIR = Path("output/video_frametimes")
-    # FRAMETIMES_CSV_FILENAME = "{filestem}_60fps_dvs_frametimes_v1.csv"
-
-    EVENTS_CSV_HAS_HEADER = False
-    LABELS_CSV_HAS_HEADER = False
+    FRAMETIMES_CSV_DIR = Path("output/video_frametimes")
+    FRAMETIMES_CSV_FILENAME = "{filestem}_60fps_dvs_frametimes_v1.csv"
 
     ##################################
 
     ############### MU #############
     # FPS = 100
 
-    # Format from Muenster dateset:   (frame_index, is_keyframe, class, confidence, left, top, width, height, center_x, center_y, instance_id) 
-    #                                      0             1         2         3       4     5     6      7        8         9           10
+    # # Format from Muenster dateset:   (frame_index, is_keyframe, class, confidence, left, top, width, height, center_x, center_y, instance_id) 
+    # #                                      0             1         2         3       4     5     6      7        8         9           10
+    # LABELS_CSV_HAS_HEADER = True
     # LABELS_CSV_FRAME_COL = 0 # frame index
     # LABELS_CSV_CLASS_COL = 2 # class name
     # LABELS_CSV_ID_COL = 10 # instance id
@@ -119,10 +119,14 @@ if __name__ == "__main__":
     # BB_IS_CONFIDENT_WHEN_MATCHES = "certain"
 
     # # Format for events: (x, y, t (us), p)
+    # EVENTS_CSV_HAS_HEADER = True
     # EVENTS_CSV_X_COL = 0
     # EVENTS_CSV_Y_COL = 1
     # EVENTS_CSV_T_COL = 2
     # EVENTS_CSV_P_COL = 3
+
+    # READ_FRAMETIMES_FROM_FILE = True
+    # FRAMETIMES_FILE_HAS_HEADER = True
 
     # # Paths
     # EVENTS_CSV_DIR = Path("output/mu_h5_to_csv")
@@ -133,8 +137,6 @@ if __name__ == "__main__":
     # FRAMETIMES_CSV_DIR = Path("output/mu_h5_frametimes_to_csv")
     # FRAMETIMES_CSV_FILENAME = "{filestem}_frametimes.csv"
 
-    # EVENTS_CSV_HAS_HEADER = True
-    # LABELS_CSV_HAS_HEADER = True
 
     ##################################
 
@@ -160,10 +162,10 @@ if __name__ == "__main__":
         # "libellen2",
         # "libellen3",
         # "vieleSchmetterlinge1",
-        # "vieleSchmetterlinge2",
-        "wespen1",
-        "wespen2",
-        "wespen3",
+        "vieleSchmetterlinge2",
+        # "wespen1",
+        # "wespen2",
+        # "wespen3",
         # MU
         # "1_l-l-l",
         # "2_l-h-l",
@@ -180,16 +182,16 @@ if __name__ == "__main__":
         labels_filepath = LABELS_CSV_DIR / LABELS_CSV_FILENAME.format(filestem=filestem)
 
         if len(filestems) > 0 and filestem not in filestems:
-            print("Skipping file:", filestem)
+            print("Skipping file:", filestem, ". Not in accepted filestems.")
             continue
 
-        print("Processing file:", filestem)
+        print("########## Processing file:", filestem, "##########")
 
         # Read frametimes from csv
         frametimes = []
         if READ_FRAMETIMES_FROM_FILE:
             frametimes_filepath = FRAMETIMES_CSV_DIR / FRAMETIMES_CSV_FILENAME.format(filestem=filestem)
-            with open(frametimes_filepath, 'r') as frametimes_file:
+            with open(frametimes_filepath, 'r', ) as frametimes_file:
                 frametimes_reader = csv.reader(frametimes_file)
 
                 if FRAMETIMES_FILE_HAS_HEADER:
@@ -397,8 +399,14 @@ if __name__ == "__main__":
                             event_color = EVENT_COLOR if label.is_confident else UNCONFIDENT_COLOR
                             instance_trajectory.events.append( (event_x, event_y, event_z, *event_color, is_confident) )
 
-                        # Draw bbox even if there are no events in it! (Dont inlcude it in previous IF)
-                        if CREATE_BBOX_EVENTS and instance_trajectory.first_timestamp is not None:
+                    event_row = next(event_reader, None)
+
+                # For DEBUG: Draw bbox corners as events
+                if CREATE_BBOX_EVENTS:
+                    for instance_id,label in prev_frame.labels.items():
+                        # get trajectory for this instance
+                        instance_trajectory = trajectories[instance_id]
+                        if instance_trajectory.first_timestamp is not None:
                             # DEBUG: Add pints of bbox
                             points_color = BBOX_COLORS[label._current_bb_index % 3]
                             is_confident = 0
@@ -417,8 +425,6 @@ if __name__ == "__main__":
                             instance_trajectory.events.append( (label.left+label.width, label.top+label.height, frame_end, *points_color, is_confident) )
 
                             label._current_bb_index += 1
-
-                    event_row = next(event_reader, None)
 
                 prev_frame = frame
 
@@ -439,7 +445,8 @@ if __name__ == "__main__":
                 bbox_filename_part = "_bbox" if CREATE_BBOX_EVENTS else ""
                 datetime_filename_part = ("_"+DATETIME_STR) if ADD_TIME_TO_FILENAME else ""
 
-                output_dir_path = OUTPUT_BASE_DIR / f"{filestem}_trajectories{bbox_filename_part}{datetime_filename_part}"
+                output_dir_path = OUTPUT_BASE_DIR/"with_bboxes" if CREATE_BBOX_EVENTS else OUTPUT_BASE_DIR
+                output_dir_path = output_dir_path / f"{filestem}_trajectories{bbox_filename_part}{datetime_filename_part}"
                 output_dir_path.mkdir(parents=True, exist_ok=True)
 
                 output_file_path = output_dir_path / f"{id}.csv"
