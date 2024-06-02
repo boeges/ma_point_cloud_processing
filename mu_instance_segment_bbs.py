@@ -44,7 +44,7 @@ for filename in filenames:
         # Read the header row and add the instance_id header
         header = next(reader)
         header.append('instance_id')
-        writer.writerow(header)
+        writer.writerow(["frame_index","class","instance_id","is_difficult","x","y","w","h"])
 
         for row in reader:
             # check if this row is a new frame
@@ -100,6 +100,10 @@ for filename in filenames:
             # add new column to row
             row.append(closest_instance.id)
             
-            writer.writerow(row)
+            # Write row in new format
+            # old format: frame_index, is_keyframe, class, confidence, left,top,width,height,center_x,center_y
+            # new format: "frame_index","class","instance_id","is_difficult","x","y","w","h"
+            new_row = [row[0], row[2], closest_instance.id, int(row[3]=="0"), round(float(row[4])), round(float(row[5])), round(float(row[6])), round(float(row[7]))]
+            writer.writerow(new_row)
 
     print(f"Saved '{output_csv_filepath}'.")
