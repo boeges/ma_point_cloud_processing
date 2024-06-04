@@ -28,7 +28,7 @@ for filename in filenames:
     # filename = "1_l-l-l"
 
     input_csv_filepath = f"../../datasets/muenster_dataset/wacv2024_ictrap_dataset/{filename}_annotation.csv"
-    output_csv_filepath = f"output/mu_frame_labels_with_ids/{filename}_annotation_instances.csv"
+    output_csv_filepath = f"output/video_annotations/{filename}_anno_inst.csv"
 
     highest_used_id = -1
     last_frame_index = "-1"
@@ -43,8 +43,7 @@ for filename in filenames:
         
         # Read the header row and add the instance_id header
         header = next(reader)
-        header.append('instance_id')
-        writer.writerow(["frame_index","class","instance_id","is_difficult","x","y","w","h"])
+        # writer.writerow(["frame_index","class","instance_id","is_difficult","x","y","w","h"])
 
         for row in reader:
             # check if this row is a new frame

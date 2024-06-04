@@ -4,21 +4,7 @@
 
 import csv
 from pathlib import Path
-
-def correct_class_name(cla):
-    real_class = ""
-    if cla=="b" or cla=="bee":
-        real_class = "bee"
-    elif cla=="u" or cla=="f" or cla=="butterfly":
-        real_class = "butterfly"
-    elif cla=="d" or cla=="dragonfly":
-        real_class = "dragonfly"
-    elif cla=="w" or cla=="wasp":
-        real_class = "wasp"
-    else:
-        # Also for case "i"
-        real_class = "insect"
-    return real_class
+from bee_utils import parse_full_class_name
 
 ############################ MAIN ##################################
 if __name__ == "__main__":
@@ -27,63 +13,71 @@ if __name__ == "__main__":
     INPUT_CLASSES_HAS_HEADER = True
 
     # Paths
-    INPUT_LABELS_DIR = Path("output/mu_frame_labels_with_ids")
-    INPUT_LABELS_FILENAME = "{filestem}_annotation_instances.csv"
+    LABELS_CSV_DIR = Path("output/video_annotations/2_separated")
+    LABELS_CSV_FILENAME = "{filestem}.csv"
+    # LABELS_CSV_FILENAME = "{filestem}_60fps_dvs_sep.txt"
 
     INPUT_CLASSES_DIR = Path("output/instance_classes")
-    INPUT_CLASSES_FILENAME = "{filestem}_instance_classes.csv"
+    INPUT_CLASSES_FILENAME = "{filestem}.csv"
 
-    OUTPUT_LABELS_DIR = Path("output/mu_frame_labels_with_ids")
-    OUTPUT_LABELS_FILENAME = "{filestem}_annotation_instances_classes.csv"
+    OUTPUT_LABELS_DIR = Path("output/video_annotations/3_classified")
+    OUTPUT_LABELS_FILENAME = "{filestem}.csv"
 
-    filestems = [
-        "1_l-l-l",
-        "2_l-h-l",
-        "3_m-h-h",
-        "4_m-m-h",
-        "5_h-l-h",
-        "6_h-h-h_filtered",
-    ]
+    # Find all csv files in EVENTS_CSV_DIR
+    labels_filepaths = [file for file in LABELS_CSV_DIR.iterdir() if file.is_file()]
+    print(f"Found {len(labels_filepaths)} csv files containing labels")
 
-    for filestem in filestems:
-        input_labels_filepath = INPUT_LABELS_DIR / INPUT_LABELS_FILENAME.format(filestem=filestem)
-        input_classes_filepath = INPUT_CLASSES_DIR / INPUT_CLASSES_FILENAME.format(filestem=filestem)
+    for labels_filepath in labels_filepaths:
+        print(labels_filepath.name)
+
+    # exit()
+
+    # filestems = [
+    #     "1_l-l-l",
+    #     "2_l-h-l",
+    #     "3_m-h-h",
+    #     "4_m-m-h",
+    #     "5_h-l-h",
+    #     "6_h-h-h_filtered",
+    # ]
+
+    for labels_filepath in labels_filepaths:
+        filestem = labels_filepath.name.replace(LABELS_CSV_FILENAME.format(filestem=""), "")
+
+        classes_filepath = INPUT_CLASSES_DIR / INPUT_CLASSES_FILENAME.format(filestem=filestem)
         output_labels_filepath = OUTPUT_LABELS_DIR / OUTPUT_LABELS_FILENAME.format(filestem=filestem)
 
-        if not input_labels_filepath.exists():
-            print("Skipping file:", filestem, ". Labels not exist!", input_labels_filepath)
+        if not classes_filepath.exists():
+            print("Skipping file:", labels_filepath.name, "; Classes file", classes_filepath.name, "does not exist!")
             continue
-        if not input_classes_filepath.exists():
-            print("Skipping file:", filestem, ". Cclasses file does not exist!", input_classes_filepath)
-            continue
-        
-        print("Processing file:", filestem)
+            
+        print("\nProcessing file:", labels_filepath.name)
 
-        with open(input_labels_filepath, 'r') as input_labels_file,\
-                open(input_classes_filepath, 'r') as input_classes_file,\
+        id_class_map = {}
+        with open(classes_filepath, 'r') as classes_file:
+            classes_reader = csv.reader(classes_file)
+            if INPUT_CLASSES_HAS_HEADER:
+                next(classes_reader)
+            # map the actual classname to each id
+            for row in classes_reader:
+                id = int(row[0])
+                cla = row[1].lower()
+                real_class = parse_full_class_name(cla, "insect")
+                id_class_map[id] = real_class
+
+        with open(labels_filepath, 'r') as labels_file,\
                 open(output_labels_filepath, 'w', newline='') as output_labels_file:
-            labels_reader = csv.reader(input_labels_file)
-            classes_reader = csv.reader(input_classes_file)
+            labels_reader = csv.reader(labels_file)
             labels_writer = csv.writer(output_labels_file)
             
             if INPUT_LABELS_HAS_HEADER:
                 next(labels_reader)
-            if INPUT_CLASSES_HAS_HEADER:
-                next(classes_reader)
 
-            # map the actual classname to each id
-            id_class_map = {}
-            for row in classes_reader:
-                id = int(row[0])
-                cla = row[1].lower()
-                real_class = correct_class_name(cla)
-                id_class_map[id] = real_class
-
-            labels_writer.writerow(["frame_index","class","instance_id","is_difficult","x","y","w","h"])
+            # labels_writer.writerow(["frame_index","class","instance_id","is_difficult","x","y","w","h"])
 
             for row in labels_reader:
                 id = int(row[2])
-                orig_class = correct_class_name(row[1])
+                orig_class = parse_full_class_name(row[1], "insect")
                 new_row = [*row]
                 # Get new class or "insect" if there is no class available for this id
                 new_class = id_class_map.get(id, "insect")

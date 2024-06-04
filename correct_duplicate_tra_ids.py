@@ -14,14 +14,26 @@ if __name__ == "__main__":
 
     PRINT_PROGRESS_EVERY_N_PERCENT = 1
     CSV_HAS_HEADER_ROW = False
-    MAX_FRAME_DIST = 60 * 5 # 3s
+    MAX_FRAME_DIST = 60 * 3 # 3s
 
-    LABELS_CSV_DIR = Path("output/video_annotations")
+    INPUT_LABELS_DIR = Path("output/video_annotations/1_annotated_instanced")
+    OUTPUT_LABELS_DIR = Path("output/video_annotations/2_separated")
+
+    OVERWRITE_EXISTING = False
+
+    # Find existing separated label files
+    existing_filepaths = [file for file in OUTPUT_LABELS_DIR.iterdir() if file.is_file()]
 
     # Find all csv files in EVENTS_CSV_DIR
-    labels_filepaths = [file for file in LABELS_CSV_DIR.iterdir() if \
-                        (file.is_file() and file.name.endswith(".txt") and not file.name.endswith("_sep.txt"))]
-    print(f"Found {len(labels_filepaths)} csv (txt) files containing bbox-labels")
+    # Do not separate Muenster files (beginning with number)
+    labels_filepaths = [file for file in INPUT_LABELS_DIR.iterdir() if \
+                        file.is_file() and \
+                        file.name.endswith(".csv") and
+                        not file.name[0].isnumeric()]
+    
+    print(f"Found {len(labels_filepaths)} csv files containing bbox-labels:")
+    for labels_filepath in labels_filepaths:
+        print(labels_filepath.name)
 
     # scenes = [
     #     # "1_l-l-l",
@@ -34,10 +46,13 @@ if __name__ == "__main__":
     # ]
 
     for input_labels_filepath in labels_filepaths:
-        print("Processing label file", input_labels_filepath, "...")
+        output_label_filepath = OUTPUT_LABELS_DIR / input_labels_filepath.name
 
-        # sep = separated
-        output_label_filepath = LABELS_CSV_DIR / input_labels_filepath.name.replace(".txt", "_sep.txt")
+        if (not OVERWRITE_EXISTING) and output_label_filepath in existing_filepaths:
+            print("Skipping file", input_labels_filepath, ". Output file already exists!")
+            continue
+
+        print("\nProcessing label file", input_labels_filepath, "...")
 
         assigned_ids = set()
         max_id = 0
@@ -59,10 +74,6 @@ if __name__ == "__main__":
             # Read bboxes
             reader = csv.reader(input_labels_file)
             writer = csv.writer(output_labels_file)
-
-            if CSV_HAS_HEADER_ROW:
-                rrow = next(reader)
-                writer.writerow(rrow)
 
             for rrow in reader:
                 frame_index = int(rrow[0])
@@ -91,6 +102,6 @@ if __name__ == "__main__":
                 
 
 
-        print(f"Created label file {output_label_filepath}!\n")
+        print(f"Created label file {output_label_filepath}!")
 
 

@@ -2,11 +2,13 @@
 
 import re
 import csv
+import cv2
 from datetime import datetime
 from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import bee_utils as bee
 
 
 def get_projected_heatmap(df, col1, col2, bins_x, bins_y):
@@ -17,11 +19,41 @@ def get_projected_heatmap(df, col1, col2, bins_x, bins_y):
     ty_hist_range = [ [0, int(t_max)], [0, bins_y] ]
 
     heatmap, xedges, yedges = np.histogram2d(df_proj[col1], df_proj[col2], bins=[bins_x, bins_y], density=False, range=ty_hist_range)
+    heatmap = heatmap.T
     extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-
-    heatmap = np.log2(heatmap+1)
-
+    # heatmap = np.log2(heatmap+1)
     return df_proj, heatmap, extent
+
+def hist2d_to_image(arr):
+    max_val_ln = np.log(arr.max()+1)
+    # log1p is ln(x+1)
+    arr = np.log1p(arr) / max_val_ln # -> [0, 1]
+    # make 0=white (=255), 1=black (=0)
+    arr = ((arr * -1) + 1.0) * 255.0
+    return arr
+
+def event_count_to_color(count, good_count):
+    if count >= good_count*2:
+        return "navy"
+    elif count >= good_count:
+        return "royalblue"
+    elif count >= good_count//2:
+        return "orange"
+    return "tomato"
+
+# Return bbox indices of bbox around all non zero values
+def arg_bbox(img):
+    rows = np.any(img, axis=1)
+    cols = np.any(img, axis=0)
+    ymin, ymax = np.nonzero(rows)[0][[0, -1]]
+    xmin, xmax = np.nonzero(cols)[0][[0, -1]]
+    return ymin, ymax+1, xmin, xmax+1
+
+# Because cv2.imwrite doe not support umlauts (ä,ü,ö) 
+def cv2_imwrite(path, image):
+    is_success, im_buf_arr = cv2.imencode(".png", image)
+    im_buf_arr.tofile(path)
+
 
 
 ############################ MAIN ##################################
@@ -35,13 +67,11 @@ if __name__ == "__main__":
 
     ADD_TIME_TO_FILENAME = True
 
+    OVERWRITE_EXISTING = True
+
     ############### PF #############
     WIDTH = 1280
     HEIGHT = 720
-    FPS = 60
-
-    # Format from DarkLabel software: (frame_index, classname, instance_id, is_difficult, x, y, w, h) 
-    #                                      0            1          2            3         4  5  6  7
 
     # Format for events: (x, y, t (us or ms), p)
     EVENTS_CSV_X_COL = 0
@@ -61,83 +91,169 @@ if __name__ == "__main__":
     # Precision of the timestamp: for mikroseconds: 1000000, for milliseconds: 1000
     TIMESTEPS_PER_SECOND = 1_000_000
     # If timestamp in mikroseconds: -> mikroseconds per frame
-    TIMESTEPS_PER_FRAME = (1 / FPS) * TIMESTEPS_PER_SECOND
-    HALF_FRAME_TIME = TIMESTEPS_PER_FRAME // 2
     T_SCALE = 0.002 # 0.002 is good
     INV_T_SCALE = 1 / T_SCALE
 
-    # Bsp: Biene hat 200 flügelschläge pro sek. Das sind 5ms pro flügelschlag.
+    # In microseconds.
     # Es sollen 10 Flügelschläge in ein Fenster passen. Also 5*10=50ms oder 50000us
-    BUCKET_WIDTH_T = 1000 * 50
+    # Bsp: Biene hat 200 flügelschläge pro sek. Das sind 5ms pro flügelschlag.
+    T_BUCKET_WIDTH = 1000 * 100
+    # for the tx, ty projection: Sub-bins per bucket on the t axis
+    BINS_PER_T_BUCKET = 250 
+
 
     # zb "1_l-l-l_trajectories_2024-05-29_15-27-12"
     dir_name_pattern = re.compile(r"^(.*)_trajectories")
 
     # Find existing figure dirs to skip them
-    existing_figure_dir_names = [d.name for d in FIGURE_OUTPUT_DIR.glob("*_trajectories*")]
+    if OVERWRITE_EXISTING:
+        existing_figure_dir_names = []
+    else:
+        existing_figure_dir_names = [d.name for d in FIGURE_OUTPUT_DIR.glob("*_trajectories*")]
 
-    # Find all files from directory; Skip existing
-    trajectory_files = [f for f in TRAJECTORIES_CSV_DIR.glob("*_trajectories*/*.csv") if f.parent.name not in existing_figure_dir_names]
+    # Find all trajectory dirs; Skip existing
+    trajectory_dirs = [d for d in TRAJECTORIES_CSV_DIR.glob("*_trajectories*") if d.name not in existing_figure_dir_names]
 
     # FOR TESTING!
     # trajectory_files = [TRAJECTORIES_CSV_DIR / "1_l-l-l_trajectories_2024-05-29_15-27-12/2.csv"]
 
-    # Iterate over files in directory
-    for trajectory_filepath in trajectory_files:
-        trajectory_filestem = trajectory_filepath.name.replace(".csv", "")
-
+    for trajectory_dir in trajectory_dirs:
         # Extract trajectory dir simple name
-        matches = re.findall(dir_name_pattern, trajectory_filepath.parent.name)
+        matches = re.findall(dir_name_pattern, trajectory_dir.name)
         if len(matches) == 0:
-            print("Skipping:", trajectory_filepath.parent.name, "/ trajectory:", trajectory_filestem, ". Doesnt match pattern!")
+            print("Skipping:", trajectory_dir.name, ", Doesnt match file name pattern!")
             continue
         trajectory_dir_name = matches[0]
 
-        print("Processing:", trajectory_filepath.parent.name, "/ trajectory:", trajectory_filestem)
+        # Find all files from directory; Skip existing
+        trajectory_files = [file for file in trajectory_dir.iterdir() if file.is_file()]
 
-        df = pd.read_csv(trajectory_filepath, sep=',', header="infer")
+        print(f"\n#### Processing scene: \"{trajectory_dir.name}\" containing {len(trajectory_files)} trajectories ####")
 
-        # timestamp in csv was multplied by 0.002 (or something else). Scale it back to real time (micros)
-        t_col_real = df.loc[:,"t"] * INV_T_SCALE
+        # Iterate over files in directory
+        for trajectory_filepath in trajectory_files:
+            filestem = trajectory_filepath.name.replace(".csv", "")
+            name_arr = filestem.split("_")
+            instance_id = name_arr[0]
+            cla = name_arr[1]
+            clas = bee.parse_full_class_name(cla, "insect")
+            pts = int(name_arr[2][3:])
+            start_ts = int(name_arr[3][5:])
 
-        # t_max is scaled! t_max_real is in real time (e.g. micros)
-        max_t_real = t_col_real.iloc[-1]
-        max_t_str = f"{int((max_t_real / TIMESTEPS_PER_SECOND) // 60):0>2}m:{(max_t_real / TIMESTEPS_PER_SECOND % 60):0>2.2f}s."
-        
-        number_of_buckets = int(np.ceil(max_t_real/BUCKET_WIDTH_T))
-        t_col_buckets = (t_col_real // BUCKET_WIDTH_T).astype('Int64')
-        event_count_per_bucket = t_col_buckets.value_counts(sort=False).sort_index()
-        # -> problem: if there are 0 events in a bucket, the bucket wont be included in the dataframe!
-        event_count_per_bucket_no_gaps = pd.Series(data=[0]*number_of_buckets, index=list(range(number_of_buckets)))
-        for x in event_count_per_bucket.items():
-            event_count_per_bucket_no_gaps.at[x[0]] = x[1]
-        event_count_per_bucket = event_count_per_bucket_no_gaps
+            print(f"Processing: \"{trajectory_dir_name}/{instance_id}\" ({clas}) ({pts} points)")
 
-        # print("max_t_real", max_t_real, max_t_str)
-        # print("Die Bahn hat", number_of_buckets, "buckets")
-        # print(t_col_buckets.head())
-        # print(t_col_buckets.tail())
-        # print(t_col_buckets.shape)
-        # print(t_col_buckets.describe())
-        # print(event_count_per_bucket.shape)
-        # print(event_count_per_bucket.head())
-        # print(event_count_per_bucket)
+            df = pd.read_csv(trajectory_filepath, sep=',', header="infer")
 
-        # Project Trajectory to 2D plane: Only use (t,x) or (t,y)
-        tx_df, tx_heatmap, tx_extent = get_projected_heatmap(df, "t", "x", 2000, WIDTH) # bins_x=number_of_buckets*10
-        ty_df, ty_heatmap, ty_extent = get_projected_heatmap(df, "t", "y", 2000, HEIGHT)
+            # timestamp in csv was multplied by 0.002 (or something else). Scale it back to real time (micros)
+            t_col_real = df.loc[:,"t"] * INV_T_SCALE
 
-        fig, axs = plt.subplots(3)
-        fig.set_size_inches(20, 8)
-        fig.suptitle(f't-x-projection, t-y-projection and event histogram of trajectory "{trajectory_dir_name}/{trajectory_filestem}" (length: {max_t_str})')
-        axs[0].imshow(tx_heatmap.T, origin='lower', cmap="Greys", aspect="auto")
-        axs[1].imshow(ty_heatmap.T, origin='lower', cmap="Greys", aspect="auto")
-        axs[2].set_xlim(left=0, right=number_of_buckets)
-        axs[2].bar(list(range(number_of_buckets)), event_count_per_bucket, color='navy', width=1.0, align="edge")
+            # t_max is scaled! t_max_real is in real time (e.g. micros)
+            max_t_real = t_col_real.iloc[-1]
+            max_t_str = f"{int((max_t_real / TIMESTEPS_PER_SECOND) // 60):0>2}m:{(max_t_real / TIMESTEPS_PER_SECOND % 60):0>2.2f}s"
+            
+            number_of_buckets = int(np.ceil(max_t_real/T_BUCKET_WIDTH))
+            t_col_buckets = (t_col_real // T_BUCKET_WIDTH).astype('Int64')
+            event_count_per_bucket = t_col_buckets.value_counts(sort=False).sort_index()
+            # -> problem: if there are 0 events in a bucket, the bucket wont be included in the dataframe!
+            event_count_per_bucket_no_gaps = pd.Series(data=[0]*number_of_buckets, index=list(range(number_of_buckets)))
+            for x in event_count_per_bucket.items():
+                event_count_per_bucket_no_gaps.at[x[0]] = x[1]
+            event_count_per_bucket = event_count_per_bucket_no_gaps
 
-        output_dir = FIGURE_OUTPUT_DIR  / trajectory_filepath.parent.name
-        output_dir.mkdir(exist_ok=True, parents=True)
-        figure_filepath = output_dir / f"{trajectory_filestem}.png"
-        plt.savefig(figure_filepath, bbox_inches='tight')
-        plt.close()
+            # print("max_t_real", max_t_real, max_t_str)
+            # print("Die Bahn hat", number_of_buckets, "buckets")
+            # print(t_col_buckets.head())
+            # print(t_col_buckets.tail())
+            # print(t_col_buckets.shape)
+            # print(t_col_buckets.describe())
+            # print(event_count_per_bucket.shape)
+            # print(event_count_per_bucket.head())
+            # print(event_count_per_bucket)
 
+            # colors for bars in events histogram
+            bar_colors = []
+            for x in event_count_per_bucket:
+                bar_colors.append(event_count_to_color(x, 4096))
+
+            # Project Trajectory to 2D plane: Only use (t,x) or (t,y)
+            tx_df, tx_heatmap, tx_extent = get_projected_heatmap(df, "t", "x", number_of_buckets*BINS_PER_T_BUCKET, WIDTH) # bins_x=number_of_buckets*10
+            ty_df, ty_heatmap, ty_extent = get_projected_heatmap(df, "t", "y", number_of_buckets*BINS_PER_T_BUCKET, HEIGHT)
+
+            # log_tx_heatmap = np.log2(tx_heatmap+1)
+            # log_ty_heatmap = np.log2(ty_heatmap+1)
+
+            tx_heatmap_image = hist2d_to_image(tx_heatmap)
+            ty_heatmap_image = hist2d_to_image(ty_heatmap)
+
+            fig, axs = plt.subplots(3, gridspec_kw={'height_ratios': [1280,720,500]})
+            fig.set_size_inches(20, 8)
+            fig.suptitle(f't-x-, t-y-projection and event histogram of "{trajectory_dir_name}/{instance_id}" ({clas}) (length: {max_t_str}, {pts} points)')
+            axs[0].imshow(tx_heatmap_image, origin='upper', cmap="gray", aspect="auto")
+            axs[1].imshow(ty_heatmap_image, origin='upper', cmap="gray", aspect="auto")
+            axs[2].set_xlim(left=0, right=number_of_buckets)
+            axs[2].bar(list(range(number_of_buckets)), event_count_per_bucket, width=1.0, align="edge", color=bar_colors)
+
+            # Save images of full trajectory
+            tra_output_dir = FIGURE_OUTPUT_DIR  / trajectory_filepath.parent.name
+            tra_output_dir.mkdir(exist_ok=True, parents=True)
+
+            # Save detailled image
+            figure_filepath = tra_output_dir / "detailled" / f"{filestem}_detailled.png"
+            figure_filepath.parent.mkdir(exist_ok=True, parents=True)
+            plt.savefig(figure_filepath, bbox_inches='tight')
+            plt.close()
+
+            # Save tx-projection and ty-projection with OpenCV
+            figure_filepath = tra_output_dir / "txproj" / f"{filestem}_txproj.png"
+            figure_filepath.parent.mkdir(exist_ok=True, parents=True)
+            cv2_imwrite(figure_filepath, tx_heatmap_image)
+
+            figure_filepath = tra_output_dir / "typroj" / f"{filestem}_txproj.png"
+            figure_filepath.parent.mkdir(exist_ok=True, parents=True)
+            cv2_imwrite(figure_filepath, ty_heatmap_image)
+
+
+            # Save images of full trajectory
+            parts_output_dir_txproj = tra_output_dir / "parts" / "txproj"
+            parts_output_dir_txproj.mkdir(exist_ok=True, parents=True)
+
+            parts_output_dir_typroj = tra_output_dir / "parts" / "typroj"
+            parts_output_dir_typroj.mkdir(exist_ok=True, parents=True)
+
+            # Create images of parts of the trajectory
+            for bucket_index in range(number_of_buckets-1):
+                t_start = BINS_PER_T_BUCKET*bucket_index
+                t_length = BINS_PER_T_BUCKET
+                t_length_real = (t_length / BINS_PER_T_BUCKET) * T_BUCKET_WIDTH
+                t_length_str = f"{(t_length_real / TIMESTEPS_PER_SECOND):0>2.2f}s"
+                t_end = t_start+t_length
+                event_count = event_count_per_bucket[bucket_index]
+
+                if event_count == 0:
+                    continue
+
+                # Crop on t axis
+                tx_heatmap_tcrop = tx_heatmap[:,t_start:t_end]
+                ty_heatmap_tcrop = ty_heatmap[:,t_start:t_end]
+
+                # Crop on y axis to used area
+                ymin, ymax, xmin, xmax = arg_bbox(tx_heatmap_tcrop)
+                tx_heatmap_tycrop = tx_heatmap_tcrop[ymin:ymax,:]
+
+                # Crop on y axis to used area
+                ymin, ymax, xmin, xmax = arg_bbox(ty_heatmap_tcrop)
+                ty_heatmap_tycrop = ty_heatmap_tcrop[ymin:ymax,:]
+
+                tx_heatmap_tycrop = hist2d_to_image(tx_heatmap_tycrop)
+                ty_heatmap_tycrop = hist2d_to_image(ty_heatmap_tycrop)
+
+                # Save tx-projection and ty-projection with OpenCV
+                figure_filepath = parts_output_dir_txproj / f"{instance_id}_p{bucket_index}_txproj_{event_count}pts.png"
+                cv2_imwrite(figure_filepath, tx_heatmap_tycrop)
+
+                figure_filepath = parts_output_dir_typroj / f"p{instance_id}_p{bucket_index}_typroj_{event_count}pts.png"
+                cv2_imwrite(figure_filepath, ty_heatmap_tycrop)
+
+                # break
+
+            # break

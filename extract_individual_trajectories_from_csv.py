@@ -7,6 +7,7 @@
 import csv
 from datetime import datetime
 from pathlib import Path
+import bee_utils as bee
 
 
 # a single bbox
@@ -30,6 +31,7 @@ class Frame:
 class InstanceTrajectory:
     def __init__(self):
         self.first_timestamp = None
+        self.cla = None # class ("bee", "butterfly", "dragonfly", "wasp")
         self.events = []
 
 
@@ -63,6 +65,7 @@ if __name__ == "__main__":
 
     CREATE_BBOX_EVENTS = False
     ADD_TIME_TO_FILENAME = True
+
     FRAMETIMES_CSV_DIR = None # Overwrite this with a path if used!
 
    ############### PF #############
@@ -88,17 +91,20 @@ if __name__ == "__main__":
     EVENTS_CSV_T_COL = 2
     EVENTS_CSV_P_COL = 3
 
-    READ_FRAMETIMES_FROM_FILE = True # False for v3 videos and annotations
+    
     FRAMETIMES_FILE_HAS_HEADER = True
 
     # Paths
     EVENTS_CSV_DIR = Path("../../datasets/Insektenklassifikation")
     EVENTS_CSV_FILENAME = "{filestem}.csv"
-    LABELS_CSV_DIR = Path("output/video_annotations")
-    LABELS_CSV_FILENAME = "{filestem}_60fps_dvs_sep.txt"
-    OUTPUT_BASE_DIR = Path("output/extracted_trajectories")
+
+    LABELS_CSV_DIR = Path("output/video_annotations/3_classified")
+    LABELS_CSV_FILENAME = "{filestem}.csv"
+
     FRAMETIMES_CSV_DIR = Path("output/video_frametimes")
     FRAMETIMES_CSV_FILENAME = "{filestem}_60fps_dvs_frametimes_v1.csv"
+
+    OUTPUT_BASE_DIR = Path("output/extracted_trajectories")
 
     ##################################
 
@@ -154,18 +160,26 @@ if __name__ == "__main__":
     events_filepaths = [file for file in EVENTS_CSV_DIR.iterdir() if (file.is_file() and file.name.endswith(".csv"))]
     print(f"Found {len(events_filepaths)} csv files containing events")
 
+    # Files that use the old/defect v1 video export format (wrong frametimes!).
+    # They need an extra file with frame_index to timestamp mapping
+    v1_video_filestems = [
+        "hauptsächlichBienen1",
+        "vieleSchmetterlinge2"
+    ]
+
+    # Scenes
     filestems = [
         # PF
-        # "hauptsächlichBienen1",
-        # "hauptsächlichBienen2",
-        # "libellen1",
-        # "libellen2",
-        # "libellen3",
-        # "vieleSchmetterlinge1",
+        "hauptsächlichBienen1",
+        "hauptsächlichBienen2",
+        "libellen1",
+        "libellen2",
+        "libellen3",
+        "vieleSchmetterlinge1",
         "vieleSchmetterlinge2",
-        # "wespen1",
-        # "wespen2",
-        # "wespen3",
+        "wespen1",
+        "wespen2",
+        "wespen3",
         # MU
         # "1_l-l-l",
         # "2_l-h-l",
@@ -181,16 +195,23 @@ if __name__ == "__main__":
         filestem = events_filepath.name.replace(".csv", "")
         labels_filepath = LABELS_CSV_DIR / LABELS_CSV_FILENAME.format(filestem=filestem)
 
-        if len(filestems) > 0 and filestem not in filestems:
-            print("Skipping file:", filestem, ". Not in accepted filestems.")
+        if not labels_filepath.exists():
+            print("#### Skipping file", events_filepath.name, ". Labels file does not exist:", labels_filepath.name)
             continue
 
-        print("########## Processing file:", filestem, "##########")
+        if len(filestems) > 0 and filestem not in filestems:
+            print("#### Skipping file:", events_filepath.name, ". Not in accepted filestems.")
+            continue
+
+        print("#### Processing file:", filestem, "####")
 
         # Read frametimes from csv
         frametimes = []
-        if READ_FRAMETIMES_FROM_FILE:
+        read_frametimes_from_file = False # False for v3 videos and annotations; True for v1 videos and annotations
+        if filestem in v1_video_filestems:
+            read_frametimes_from_file = True
             frametimes_filepath = FRAMETIMES_CSV_DIR / FRAMETIMES_CSV_FILENAME.format(filestem=filestem)
+            print("Reading frametimes from file:", frametimes_filepath.name)
             with open(frametimes_filepath, 'r', ) as frametimes_file:
                 frametimes_reader = csv.reader(frametimes_file)
 
@@ -203,7 +224,6 @@ if __name__ == "__main__":
                     frametimes.append(float(frametimes_row[1]))
 
 
-
         # Contains all labels per frame
         # old [ Frame{start, index, labels:[ Label{is_confident, left, top, width, height, instance_id}, ... ]}, ... ]
         # new [ Frame{start, index, labels: { <instance_id> : Label{is_confident, left, top, width, height, instance_id}, ... } }, ... ]
@@ -212,8 +232,9 @@ if __name__ == "__main__":
         frame_time = 0
         frame_index = 0
 
-        # Find unique instance ids
-        instance_ids = set()
+        # Find unique instance ids and store all events for each instance
+        # { <instance_id>: InstanceTrajectory{ first_timestamp, cla, events:[ (x, y, t, is_confident, r, g, b), ... ] }, ... }
+        trajectories = {}
         
         with open(labels_filepath, 'r') as labels_file, open(events_filepath, 'r') as events_file:
             # Read labels
@@ -226,7 +247,7 @@ if __name__ == "__main__":
 
 
             while labels_row is not None:
-                corrected_frame_time = frametimes[frame_index] if READ_FRAMETIMES_FROM_FILE else (frame_time + FRAME_TIME_OFFSET)
+                corrected_frame_time = frametimes[frame_index] if read_frametimes_from_file else (frame_time + FRAME_TIME_OFFSET)
                 frame = Frame(corrected_frame_time, frame_index)
                 frames.append(frame)
 
@@ -251,7 +272,11 @@ if __name__ == "__main__":
                             labels_row[LABELS_CSV_IS_CONFIDENT_COL] == BB_IS_CONFIDENT_WHEN_MATCHES
                         )
                         frame.labels[instance_id] = label
-                        instance_ids.add(instance_id)
+                        if instance_id not in trajectories:
+                            tra = InstanceTrajectory()
+                            cla = labels_row[LABELS_CSV_CLASS_COL]
+                            tra.cla = bee.full_class_to_short_class(cla, "ins")
+                            trajectories[instance_id] = tra
                     else:
                         # label_frame_index < current_frame_index
                         # Iterate until matching frame has been found
@@ -317,13 +342,7 @@ if __name__ == "__main__":
 
             frames = interp_frames
             print("Interpolated frames:", len(frames), " (real + subframes)")
-
-            # store all events for each instance
-            # { <instance_id>: InstanceEvents{ first_timestamp, events:[ (x, y, t, is_confident, r, g, b), ... ] }
-            trajectories = {}
-            for id in instance_ids:
-                trajectories[id] = InstanceTrajectory()
-
+           
             # Find total row count for tracking progress
             print("Scanning events CSV file to find total row count...")
             event_row_count = sum(1 for _ in events_file)
@@ -394,10 +413,10 @@ if __name__ == "__main__":
                                 instance_trajectory.first_timestamp = event_timestamp
 
                             # shift (to zero) and scale timestamp coordinate
-                            event_z = (event_timestamp - instance_trajectory.first_timestamp) * T_SCALE
+                            event_t_scaled = (event_timestamp - instance_trajectory.first_timestamp) * T_SCALE
                             is_confident = 1 if label.is_confident else 0
                             event_color = EVENT_COLOR if label.is_confident else UNCONFIDENT_COLOR
-                            instance_trajectory.events.append( (event_x, event_y, event_z, *event_color, is_confident) )
+                            instance_trajectory.events.append( (event_x, event_y, event_t_scaled, *event_color, is_confident) )
 
                     event_row = next(event_reader, None)
 
@@ -429,7 +448,7 @@ if __name__ == "__main__":
                 prev_frame = frame
 
             # print debug stuff
-            print("Number of instance trajectories:", len(trajectories))
+            print("\nNumber of instance trajectories:", len(trajectories))
             for id, trajectory in trajectories.items():
                 print("trajectory", id, "has", len(trajectory.events), "events and starts at t =", trajectory.first_timestamp)
 
@@ -445,11 +464,11 @@ if __name__ == "__main__":
                 bbox_filename_part = "_bbox" if CREATE_BBOX_EVENTS else ""
                 datetime_filename_part = ("_"+DATETIME_STR) if ADD_TIME_TO_FILENAME else ""
 
-                output_dir_path = OUTPUT_BASE_DIR/"with_bboxes" if CREATE_BBOX_EVENTS else OUTPUT_BASE_DIR
+                output_dir_path = (OUTPUT_BASE_DIR / "_with_bboxes") if CREATE_BBOX_EVENTS else OUTPUT_BASE_DIR
                 output_dir_path = output_dir_path / f"{filestem}_trajectories{bbox_filename_part}{datetime_filename_part}"
                 output_dir_path.mkdir(parents=True, exist_ok=True)
 
-                output_file_path = output_dir_path / f"{id}.csv"
+                output_file_path = output_dir_path / f"{id}_{trajectory.cla}_pts{len(trajectory.events)}_start{int(trajectory.first_timestamp)}.csv"
 
                 with open(output_file_path, 'w', newline='') as file:
                     writer = csv.writer(file)
@@ -460,8 +479,17 @@ if __name__ == "__main__":
 
     print("Finished!")
 
+"""
+bee
+butterfly
+dragonly
+wasp
 
-
+bee
+but
+dra
+was
+"""
                 
 
 

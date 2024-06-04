@@ -19,45 +19,32 @@ if __name__ == "__main__":
     HEIGHT = 720
     PRINT_PROGRESS_EVERY_N_PERCENT = 1
 
+    OVERWRITE_EXISTING = False
 
-    ############### PF #############
-    # FPS = 60
-    # DRAW_VIEWBOX = False
+    # # Default values
+    OFFSET_X = 0
+    OFFSET_Y = 0
+    SCALE_X = 1
+    SCALE_Y = 1
+    BB_PADDING = 0
+    DRAW_VIEWBOX = False
 
-    # # Format from DarkLabel software: (frame_index, classname, instance_id, is_difficult, x, y, w, h) 
-    # #                                      0            1          2            3         4  5  6  7
-    # LABELS_CSV_HAS_HEADER = False
-    # LABELS_CSV_FRAME_COL = 0 # frame index
-    # LABELS_CSV_CLASS_COL = 1 # class name
-    # LABELS_CSV_ID_COL = 2 # instance id
-    # LABELS_CSV_IS_CONFIDENT_COL = 3
-    # LABELS_CSV_X_COL = 4
-    # LABELS_CSV_Y_COL = 5
-    # LABELS_CSV_W_COL = 6
-    # LABELS_CSV_H_COL = 7
-    # BB_IS_CONFIDENT_WHEN_MATCHES = "0" # is_difficult: 0(=confident)/1(=difficult)
+    # Paths
+    # SUBDIR = "2_separated"
+    SUBDIR = "3_classified"
 
-    # # Paths
-    # LABELS_CSV_DIR = Path("output/video_annotations")
-    # # LABELS_CSV_FILENAME = "{filestem}_60fps_dvs_sep.txt"
-    # LABELS_CSV_FILENAME = "{filestem}_60fps_dvs_v3_sep.txt"
+    LABELS_CSV_DIR = Path("output/video_annotations/"+SUBDIR)
+    LABELS_CSV_FILENAME = "{filestem}.csv"
 
-    # INPUT_VIDEO_DIR = Path("output/csv_to_video")
-    # # INPUT_VIDEO_FILENAME = "{filestem}_60fps_dvs.mp4"
-    # INPUT_VIDEO_FILENAME = "{filestem}_60fps_dvs_v3.mp4"
+    INPUT_VIDEO_DIR = Path("output/csv_to_video")
+    INPUT_VIDEO_FILENAME = "{filestem}_60fps_dvs{video_prefix}.mp4"
 
-    # OUTPUT_VIDEO_DIR = Path("output/videos_with_bbs")
-    # OUTPUT_VIDEO_FILENAME = "{filestem}_dvs_bb_instances.mp4"
-
-    ##################################
-
-    ############### MU #############
-    FPS = 100
-    DRAW_VIEWBOX = True
+    OUTPUT_VIDEO_DIR = Path("output/videos_with_bbs/"+SUBDIR)
+    OUTPUT_VIDEO_FILENAME = "{filestem}_dvs_bb_instances.mp4"
 
     # Format from DarkLabel software: (frame_index, classname, instance_id, is_difficult, x, y, w, h) 
     #                                      0            1          2            3         4  5  6  7
-    LABELS_CSV_HAS_HEADER = True
+    LABELS_CSV_HAS_HEADER = False
     LABELS_CSV_FRAME_COL = 0 # frame index
     LABELS_CSV_CLASS_COL = 1 # class name
     LABELS_CSV_ID_COL = 2 # instance id
@@ -68,52 +55,83 @@ if __name__ == "__main__":
     LABELS_CSV_H_COL = 7
     BB_IS_CONFIDENT_WHEN_MATCHES = "0" # is_difficult: 0(=confident)/1(=difficult)
 
-    # Default values
-    # OFFSET_X = 0
-    # OFFSET_Y = 0
-    # SCALE_X = 1
-    # SCALE_Y = 1
-
     # Offset and scale of label coordinates (should usually be offset=0 and scale=1).
     # For drawing BBs on the RGB video
-    OFFSET_X = -50
-    OFFSET_Y = 100
-    SCALE_X = 1.35
-    SCALE_Y = 1.35
-    BB_PADDING = 20 # px in each direction
+    # OFFSET_X = -50
+    # OFFSET_Y = 100
+    # SCALE_X = 1.35
+    # SCALE_Y = 1.35
+    # BB_PADDING = 20 # px in each direction
+
+    ############### PF #############
+    # FPS = 60
+
+    # # Paths
+    # INPUT_VIDEO_DIR = Path("output/csv_to_video")
+    # INPUT_VIDEO_FILENAME = "{filestem}_60fps_dvs{video_prefix}.mp4"
+    ##################################
+
+    ############### MU #############
+    FPS = 100
 
     # Paths
-    LABELS_CSV_DIR = Path("output/mu_frame_labels_with_ids")
-    LABELS_CSV_FILENAME = "{filestem}_annotation_instances_classes.csv"
-
     INPUT_VIDEO_DIR = Path("../../datasets/muenster_dataset/wacv2024_ictrap_dataset")
-    # INPUT_VIDEO_FILENAME = "{filestem}_dvs.mp4"
-    INPUT_VIDEO_FILENAME = "{filestem}_rgb.mp4"
-
-    OUTPUT_VIDEO_DIR = Path("output/videos_with_bbs")
-    # OUTPUT_VIDEO_FILENAME = "{filestem}_dvs_bb_instances.mp4"
-    OUTPUT_VIDEO_FILENAME = "{filestem}_rgb_bb_instances.mp4"
-
+    INPUT_VIDEO_FILENAME = "{filestem}_dvs.mp4"
+    # INPUT_VIDEO_FILENAME = "{filestem}_rgb.mp4"
     ##################################
+
+    OUTPUT_VIDEO_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Files that use the old/defect v1 video export format (wrong frametimes!)
+    v1_video_filestems = [
+        "hauptsächlichBienen1",
+        "vieleSchmetterlinge2"
+    ]
 
     filestems = [
         # "1_l-l-l",
         # "2_l-h-l",
-        "3_m-h-h",
+        # "3_m-h-h",
         # "4_m-m-h",
         # "5_h-l-h",
         # "6_h-h-h_filtered",
         # "hauptsächlichBienen1"
         # "libellen1"
         # "vieleSchmetterlinge2"
+        # "wespen1",
+        # "wespen2"
     ]
 
-    for filestem in filestems:
-        print("Processing video", filestem, "...")
+    # Find all existing output videos
+    output_videos_filepaths = [file for file in OUTPUT_VIDEO_DIR.iterdir() if file.is_file()]
 
-        labels_filepath = LABELS_CSV_DIR / LABELS_CSV_FILENAME.format(filestem=filestem)
-        input_video_path = INPUT_VIDEO_DIR / INPUT_VIDEO_FILENAME.format(filestem=filestem)
+    # Find all csv files in EVENTS_CSV_DIR
+    labels_filepaths = [file for file in LABELS_CSV_DIR.iterdir() if file.is_file() and file.name.endswith(".csv")]
+    print(f"Found {len(labels_filepaths)} csv files containing labels")
+
+
+    for labels_filepath in labels_filepaths:
+        filestem = labels_filepath.name.replace(LABELS_CSV_FILENAME.format(filestem=""), "")
+
+        # Some annotation files were made on the old/defect v1 videos
+        video_prefix = "_v1" if filestem in v1_video_filestems else "_v3"
+
+        input_video_path = INPUT_VIDEO_DIR / INPUT_VIDEO_FILENAME.format(filestem=filestem, video_prefix=video_prefix)
         output_video_path = OUTPUT_VIDEO_DIR / OUTPUT_VIDEO_FILENAME.format(filestem=filestem)
+
+        if not input_video_path.exists():
+            print("Skipping labels file", labels_filepath.name, ". Video file does not exist:", input_video_path.name)
+            continue
+
+        if len(filestems)>0 and filestem not in filestems:
+            print("Skipping labels file", labels_filepath.name, ". Not in accepted filestems")
+            continue
+
+        if (not OVERWRITE_EXISTING) and output_video_path in output_videos_filepaths:
+            print("Skipping file", labels_filepath.name, ". Video file already exists!")
+            continue
+
+        print("Processing labels file:", labels_filepath.name, ", video file:", input_video_path.name)
 
         # For text
         font = cv2.FONT_HERSHEY_SIMPLEX
@@ -231,4 +249,4 @@ if __name__ == "__main__":
             cap.release()
             out.release()
 
-            print(f"Created video {output_video_path}!")
+            print(f"\nCreated video {output_video_path}!")
