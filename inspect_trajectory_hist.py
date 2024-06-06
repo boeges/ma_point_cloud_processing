@@ -30,7 +30,7 @@ def hist2d_to_image(arr):
     arr = np.log1p(arr) / max_val_ln # -> [0, 1]
     # make 0=white (=255), 1=black (=0)
     arr = ((arr * -1) + 1.0) * 255.0
-    return arr
+    return arr.astype(int)
 
 def event_count_to_color(count, good_count):
     if count >= good_count*2:
@@ -51,10 +51,35 @@ def arg_bbox(img):
 
 # Because cv2.imwrite doe not support umlauts (ä,ü,ö) 
 def cv2_imwrite(path, image):
-    is_success, im_buf_arr = cv2.imencode(".png", image)
+    _, im_buf_arr = cv2.imencode(".png", image)
     im_buf_arr.tofile(path)
 
+# image as monochrome image with [0,255] (255=white)
+def draw_t_ticks_into_image(image, pixel_distance):
+    image = image.copy()
+    # shape: (height,width)
+    h = image.shape[0]
+    w = image.shape[1]
+    for x in range(0, w, pixel_distance):
+        part_id = x // pixel_distance
+        t_s = part_id * T_BUCKET_LENGTH / 1_000_000
+        # Grid over full height
+        image[20:h-20,x] = 191
+        # Top and bottom ticks
+        image[0:20,x-1:x+1] = 0
+        image[h-20:h,x-1:x+1] = 0
+        # Add part index and time to ticks
+        text = f"p:{part_id:0>3} t:{t_s:0>5.2f}s"
+        position = (x+5, 20)  # (x, y) coordinates
+        cv2.putText(image, text, position, FONT, FONT_SCALE, FONT_COLOR, thickness=1)
+    return image
 
+def y_crop_to_used_area(image, padding=0):
+    image_height = image.shape[0]
+    ymin, ymax, xmin, xmax = arg_bbox(image)
+    ymin = max(0, ymin-padding)
+    ymax = min(image_height-1, ymax+padding)
+    return image[ymin:ymax,:]
 
 ############################ MAIN ##################################
 if __name__ == "__main__":
@@ -66,7 +91,6 @@ if __name__ == "__main__":
     PRINT_PROGRESS_EVERY_N_PERCENT = 1
 
     ADD_TIME_TO_FILENAME = True
-
     OVERWRITE_EXISTING = True
 
     ############### PF #############
@@ -81,25 +105,34 @@ if __name__ == "__main__":
 
     # Paths
     TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories")
-    FIGURE_OUTPUT_DIR = Path("output/figures/projection_and_hist")
-
-    EVENTS_CSV_HAS_HEADER = False
-    LABELS_CSV_HAS_HEADER = False
+    FIGURE_OUTPUT_DIR = Path("output/figures/projection_and_hist") / DATETIME_STR
 
     ##################################
     
-    # Precision of the timestamp: for mikroseconds: 1000000, for milliseconds: 1000
+    # Precision of the timestamp in fractions per second.
+    # For mikroseconds: 1000000, for milliseconds: 1000
     TIMESTEPS_PER_SECOND = 1_000_000
-    # If timestamp in mikroseconds: -> mikroseconds per frame
-    T_SCALE = 0.002 # 0.002 is good
+    # The factor with which the timestamps in the trajetory csv have been scaled.
+    # If they are unscaled/original use 1.0; If they have been multiplied with 0.002 use 0.002.
+    T_SCALE = 0.002
     INV_T_SCALE = 1 / T_SCALE
 
-    # In microseconds.
-    # Es sollen 10 Flügelschläge in ein Fenster passen. Also 5*10=50ms oder 50000us
-    # Bsp: Biene hat 200 flügelschläge pro sek. Das sind 5ms pro flügelschlag.
-    T_BUCKET_WIDTH = 1000 * 100
+    # Timely width of a t-bucket in microseconds or milliseconds.
+    # 1000 * 100 means 100ms. Thus events in each 100ms interval are collected in a t-bucket.
+    # Butterfly has 20 wing beats per second (wbps), bee has 200wbps.
+    T_BUCKET_LENGTH = 1000 * 100
     # for the tx, ty projection: Sub-bins per bucket on the t axis
     BINS_PER_T_BUCKET = 250 
+    # For saving matplotlib images
+    SAVE_IMAGE_DPI = 300
+    # Whether to crop images of the full flight trajectories to their used y areas
+    Y_CROP_FULL_TRAJ_IMAGES = True
+    # Draw ticks, vertical lines and text
+    DRAW_T_TICKS = True
+    # For text of ticks
+    FONT = cv2.FONT_HERSHEY_SIMPLEX
+    FONT_SCALE = 0.5
+    FONT_COLOR = 127  # BGR color (here, green)
 
 
     # zb "1_l-l-l_trajectories_2024-05-29_15-27-12"
@@ -151,8 +184,8 @@ if __name__ == "__main__":
             max_t_real = t_col_real.iloc[-1]
             max_t_str = f"{int((max_t_real / TIMESTEPS_PER_SECOND) // 60):0>2}m:{(max_t_real / TIMESTEPS_PER_SECOND % 60):0>2.2f}s"
             
-            number_of_buckets = int(np.ceil(max_t_real/T_BUCKET_WIDTH))
-            t_col_buckets = (t_col_real // T_BUCKET_WIDTH).astype('Int64')
+            number_of_buckets = int(np.ceil(max_t_real/T_BUCKET_LENGTH))
+            t_col_buckets = (t_col_real // T_BUCKET_LENGTH).astype('Int64')
             event_count_per_bucket = t_col_buckets.value_counts(sort=False).sort_index()
             # -> problem: if there are 0 events in a bucket, the bucket wont be included in the dataframe!
             event_count_per_bucket_no_gaps = pd.Series(data=[0]*number_of_buckets, index=list(range(number_of_buckets)))
@@ -182,8 +215,17 @@ if __name__ == "__main__":
             # log_tx_heatmap = np.log2(tx_heatmap+1)
             # log_ty_heatmap = np.log2(ty_heatmap+1)
 
+            if Y_CROP_FULL_TRAJ_IMAGES:
+                # Crop on y axis to used area
+                tx_heatmap = y_crop_to_used_area(tx_heatmap, 50)
+                ty_heatmap = y_crop_to_used_area(ty_heatmap, 50)
+
             tx_heatmap_image = hist2d_to_image(tx_heatmap)
             ty_heatmap_image = hist2d_to_image(ty_heatmap)
+
+            if DRAW_T_TICKS:
+                tx_heatmap_image = draw_t_ticks_into_image(tx_heatmap_image, BINS_PER_T_BUCKET)
+                ty_heatmap_image = draw_t_ticks_into_image(ty_heatmap_image, BINS_PER_T_BUCKET)
 
             fig, axs = plt.subplots(3, gridspec_kw={'height_ratios': [1280,720,500]})
             fig.set_size_inches(20, 8)
@@ -200,7 +242,7 @@ if __name__ == "__main__":
             # Save detailled image
             figure_filepath = tra_output_dir / "detailled" / f"{filestem}_detailled.png"
             figure_filepath.parent.mkdir(exist_ok=True, parents=True)
-            plt.savefig(figure_filepath, bbox_inches='tight')
+            plt.savefig(figure_filepath, format="png", bbox_inches="tight", dpi=SAVE_IMAGE_DPI)
             plt.close()
 
             # Save tx-projection and ty-projection with OpenCV
@@ -224,7 +266,7 @@ if __name__ == "__main__":
             for bucket_index in range(number_of_buckets-1):
                 t_start = BINS_PER_T_BUCKET*bucket_index
                 t_length = BINS_PER_T_BUCKET
-                t_length_real = (t_length / BINS_PER_T_BUCKET) * T_BUCKET_WIDTH
+                t_length_real = (t_length / BINS_PER_T_BUCKET) * T_BUCKET_LENGTH
                 t_length_str = f"{(t_length_real / TIMESTEPS_PER_SECOND):0>2.2f}s"
                 t_end = t_start+t_length
                 event_count = event_count_per_bucket[bucket_index]
@@ -251,9 +293,9 @@ if __name__ == "__main__":
                 figure_filepath = parts_output_dir_txproj / f"{instance_id}_p{bucket_index}_txproj_{event_count}pts.png"
                 cv2_imwrite(figure_filepath, tx_heatmap_tycrop)
 
-                figure_filepath = parts_output_dir_typroj / f"p{instance_id}_p{bucket_index}_typroj_{event_count}pts.png"
+                figure_filepath = parts_output_dir_typroj / f"{instance_id}_p{bucket_index}_typroj_{event_count}pts.png"
                 cv2_imwrite(figure_filepath, ty_heatmap_tycrop)
 
-                # break
-
-            # break
+        #         break
+        #     break
+        # break
