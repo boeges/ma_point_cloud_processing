@@ -10,13 +10,13 @@ import numpy as np
 import pandas as pd
 import bee_utils as bee
 
-
-def get_projected_heatmap(df, col1, col2, bins_x, bins_y):
+# width_x is the end of the last bucket on the x axis (usually t axis)
+def get_projected_heatmap(df, col1, col2, bins_x, bins_y, width_x):
     df_proj = df.loc[:,[col1, col2]]
 
-    t_max = df_proj[col1].iloc[-1]
+    # t_max = df_proj[col1].iloc[-1]
     # [[xmin, xmax], [ymin, ymax]]
-    ty_hist_range = [ [0, int(t_max)], [0, bins_y] ]
+    ty_hist_range = [ [0, width_x], [0, bins_y] ]
 
     heatmap, xedges, yedges = np.histogram2d(df_proj[col1], df_proj[col2], bins=[bins_x, bins_y], density=False, range=ty_hist_range)
     heatmap = heatmap.T
@@ -185,11 +185,13 @@ if __name__ == "__main__":
             max_t_str = f"{int((max_t_real / TIMESTEPS_PER_SECOND) // 60):0>2}m:{(max_t_real / TIMESTEPS_PER_SECOND % 60):0>2.2f}s"
             
             number_of_buckets = int(np.ceil(max_t_real/T_BUCKET_LENGTH))
-            t_col_buckets = (t_col_real // T_BUCKET_LENGTH).astype('Int64')
-            event_count_per_bucket = t_col_buckets.value_counts(sort=False).sort_index()
+            bucket_index_per_event = (t_col_real // T_BUCKET_LENGTH).astype('Int64')
+            event_count_per_bucket = bucket_index_per_event.value_counts(sort=False).sort_index()
             # -> problem: if there are 0 events in a bucket, the bucket wont be included in the dataframe!
+            # create series of zeros with same length as event_count_per_bucket
             event_count_per_bucket_no_gaps = pd.Series(data=[0]*number_of_buckets, index=list(range(number_of_buckets)))
             for x in event_count_per_bucket.items():
+                # x[0] is the bucket index, x[1] is the bucket event count
                 event_count_per_bucket_no_gaps.at[x[0]] = x[1]
             event_count_per_bucket = event_count_per_bucket_no_gaps
 
@@ -209,8 +211,8 @@ if __name__ == "__main__":
                 bar_colors.append(event_count_to_color(x, 4096))
 
             # Project Trajectory to 2D plane: Only use (t,x) or (t,y)
-            tx_df, tx_heatmap, tx_extent = get_projected_heatmap(df, "t", "x", number_of_buckets*BINS_PER_T_BUCKET, WIDTH) # bins_x=number_of_buckets*10
-            ty_df, ty_heatmap, ty_extent = get_projected_heatmap(df, "t", "y", number_of_buckets*BINS_PER_T_BUCKET, HEIGHT)
+            tx_df, tx_heatmap, tx_extent = get_projected_heatmap(df, "t", "x", number_of_buckets*BINS_PER_T_BUCKET, WIDTH, number_of_buckets*T_BUCKET_LENGTH*T_SCALE)
+            ty_df, ty_heatmap, ty_extent = get_projected_heatmap(df, "t", "y", number_of_buckets*BINS_PER_T_BUCKET, HEIGHT, number_of_buckets*T_BUCKET_LENGTH*T_SCALE)
 
             # log_tx_heatmap = np.log2(tx_heatmap+1)
             # log_ty_heatmap = np.log2(ty_heatmap+1)
