@@ -1,8 +1,8 @@
 # Purpose: Fragment individual flight trajectories into smaller parts,
 # so that they will fit into PointNet which requires 4096 points.
+# Each part is exactly 4096 points. The time length will vary.
 
 import csv
-import h5py
 import numpy as np
 from datetime import datetime
 from pathlib import Path
