@@ -11,8 +11,8 @@ class Instance:
         self.last_seen_n_frames_ago = last_seen_n_frames_ago
         self.is_assigned_this_frame = False
 
-max_bb_dist = 50 # pixels
-max_last_seen_n_frames_ago = 100
+MAX_BB_DIST = 50 # pixels
+MAX_LAST_SEEN_N_FRAMES_AGO = 100
 
 filenames = [
     "1_l-l-l",
@@ -56,7 +56,7 @@ for filename in filenames:
             if is_new_frame:
                 # remove instances that havent been seen in a while
                 for instance in open_instances:
-                    if instance.last_seen_n_frames_ago >= max_last_seen_n_frames_ago:
+                    if instance.last_seen_n_frames_ago >= MAX_LAST_SEEN_N_FRAMES_AGO:
                         # if <last_seen_n_frames_ago> is too large
                         # add instance to close_instances to remove it from open_instances later
                         close_instances.append(instance.id)
@@ -80,7 +80,7 @@ for filename in filenames:
             for index, instance in enumerate(open_instances):
                 if not instance.is_assigned_this_frame:
                     dist = math.sqrt((instance.last_x - x)**2 + (instance.last_y - y)**2)
-                    if dist < max_bb_dist and dist < min_dist:
+                    if dist < MAX_BB_DIST and dist < min_dist:
                         min_dist = dist
                         closest_instance = instance
 

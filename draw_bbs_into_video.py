@@ -30,17 +30,17 @@ if __name__ == "__main__":
     DRAW_VIEWBOX = False
 
     # Paths
-    # SUBDIR = "2_separated"
-    SUBDIR = "3_classified"
+    SEGMENTATION_STAGE = "2_separated"
+    # SEGMENTATION_STAGE = "3_classified"
 
-    LABELS_CSV_DIR = Path("output/video_annotations/"+SUBDIR)
+    LABELS_CSV_DIR = Path("output/video_annotations/"+SEGMENTATION_STAGE)
     LABELS_CSV_FILENAME = "{filestem}.csv"
 
     INPUT_VIDEO_DIR = Path("output/csv_to_video")
     INPUT_VIDEO_FILENAME = "{filestem}_60fps_dvs{video_prefix}.mp4"
 
-    OUTPUT_VIDEO_DIR = Path("output/videos_with_bbs/"+SUBDIR)
-    OUTPUT_VIDEO_FILENAME = "{filestem}_dvs_bb_instances.mp4"
+    OUTPUT_VIDEO_DIR = Path("output/videos_with_bbs/"+SEGMENTATION_STAGE)
+    OUTPUT_VIDEO_FILENAME = "{filestem}_dvs.mp4"
 
     # Format from DarkLabel software: (frame_index, classname, instance_id, is_difficult, x, y, w, h) 
     #                                      0            1          2            3         4  5  6  7

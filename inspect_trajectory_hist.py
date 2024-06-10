@@ -103,10 +103,6 @@ if __name__ == "__main__":
     EVENTS_CSV_T_COL = 2
     EVENTS_CSV_P_COL = 3
 
-    # Paths
-    TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories")
-    FIGURE_OUTPUT_DIR = Path("output/figures/projection_and_hist") / DATETIME_STR
-
     ##################################
     
     # Precision of the timestamp in fractions per second.
@@ -121,18 +117,24 @@ if __name__ == "__main__":
     # 1000 * 100 means 100ms. Thus events in each 100ms interval are collected in a t-bucket.
     # Butterfly has 20 wing beats per second (wbps), bee has 200wbps.
     T_BUCKET_LENGTH = 1000 * 100
+    T_BUCKET_LENGTH_MS = int(T_BUCKET_LENGTH / 1000)
     # for the tx, ty projection: Sub-bins per bucket on the t axis
     BINS_PER_T_BUCKET = 250 
     # For saving matplotlib images
     SAVE_IMAGE_DPI = 300
     # Whether to crop images of the full flight trajectories to their used y areas
-    Y_CROP_FULL_TRAJ_IMAGES = True
+    Y_CROP_FULL_TRAJ_IMAGES = False
     # Draw ticks, vertical lines and text
     DRAW_T_TICKS = True
     # For text of ticks
     FONT = cv2.FONT_HERSHEY_SIMPLEX
     FONT_SCALE = 0.5
     FONT_COLOR = 127  # BGR color (here, green)
+
+    # Paths
+    TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories/2_separated_2024-06-09_14-46-59")
+    # tf: timeframe
+    FIGURE_OUTPUT_DIR = Path("output/figures/projection_and_hist") / f"tf{T_BUCKET_LENGTH_MS}ms_{DATETIME_STR}"
 
 
     # zb "1_l-l-l_trajectories_2024-05-29_15-27-12"
@@ -148,6 +150,7 @@ if __name__ == "__main__":
     trajectory_dirs = [d for d in TRAJECTORIES_CSV_DIR.glob("*_trajectories*") if d.name not in existing_figure_dir_names]
 
     # FOR TESTING!
+    trajectory_dirs = [TRAJECTORIES_CSV_DIR / "6_h-h-h_filtered_trajectories"]
     # trajectory_files = [TRAJECTORIES_CSV_DIR / "1_l-l-l_trajectories_2024-05-29_15-27-12/2.csv"]
 
     for trajectory_dir in trajectory_dirs:
@@ -219,11 +222,14 @@ if __name__ == "__main__":
 
             if Y_CROP_FULL_TRAJ_IMAGES:
                 # Crop on y axis to used area
-                tx_heatmap = y_crop_to_used_area(tx_heatmap, 50)
-                ty_heatmap = y_crop_to_used_area(ty_heatmap, 50)
+                tx_heatmap_ycrop = y_crop_to_used_area(tx_heatmap, 50)
+                ty_heatmap_ycrop = y_crop_to_used_area(ty_heatmap, 50)
+            else:
+                tx_heatmap_ycrop = tx_heatmap
+                ty_heatmap_ycrop = ty_heatmap
 
-            tx_heatmap_image = hist2d_to_image(tx_heatmap)
-            ty_heatmap_image = hist2d_to_image(ty_heatmap)
+            tx_heatmap_image = hist2d_to_image(tx_heatmap_ycrop)
+            ty_heatmap_image = hist2d_to_image(ty_heatmap_ycrop)
 
             if DRAW_T_TICKS:
                 tx_heatmap_image = draw_t_ticks_into_image(tx_heatmap_image, BINS_PER_T_BUCKET)
@@ -252,7 +258,7 @@ if __name__ == "__main__":
             figure_filepath.parent.mkdir(exist_ok=True, parents=True)
             cv2_imwrite(figure_filepath, tx_heatmap_image)
 
-            figure_filepath = tra_output_dir / "typroj" / f"{filestem}_txproj.png"
+            figure_filepath = tra_output_dir / "typroj" / f"{filestem}_typroj.png"
             figure_filepath.parent.mkdir(exist_ok=True, parents=True)
             cv2_imwrite(figure_filepath, ty_heatmap_image)
 
