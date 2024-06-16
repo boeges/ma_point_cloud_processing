@@ -93,7 +93,6 @@ if __name__ == "__main__":
     ADD_TIME_TO_FILENAME = True
     OVERWRITE_EXISTING = True
 
-    ############### PF #############
     WIDTH = 1280
     HEIGHT = 720
 
@@ -102,8 +101,6 @@ if __name__ == "__main__":
     EVENTS_CSV_Y_COL = 1
     EVENTS_CSV_T_COL = 2
     EVENTS_CSV_P_COL = 3
-
-    ##################################
     
     # Precision of the timestamp in fractions per second.
     # For mikroseconds: 1000000, for milliseconds: 1000
@@ -116,12 +113,18 @@ if __name__ == "__main__":
     # Timely width of a t-bucket in microseconds or milliseconds.
     # 1000 * 100 means 100ms. Thus events in each 100ms interval are collected in a t-bucket.
     # Butterfly has 20 wing beats per second (wbps), bee has 200wbps.
-    T_BUCKET_LENGTH = 1000 * 100
+    T_BUCKET_LENGTH = 1000 * 100 # 100ms
+    # T_BUCKET_LENGTH = 1000 * 4000 # 4s
     T_BUCKET_LENGTH_MS = int(T_BUCKET_LENGTH / 1000)
     # for the tx, ty projection: Sub-bins per bucket on the t axis
-    BINS_PER_T_BUCKET = 250 
+    # short: tbr: t bucket resolutions
+    # BINS_PER_T_BUCKET = 250
+    BINS_PER_T_BUCKET = int(T_BUCKET_LENGTH_MS * 2.5) # 250 for 100ms, 10000 for 4000ms
+    # BINS_PER_T_BUCKET = T_BUCKET_LENGTH_MS # a bucket for every ms
     # For saving matplotlib images
     SAVE_IMAGE_DPI = 300
+    # Save images of each individual bucket (WARNING: Creates many images)
+    SAVE_BUCKET_IMAGES = False
     # Whether to crop images of the full flight trajectories to their used y areas
     Y_CROP_FULL_TRAJ_IMAGES = False
     # Draw ticks, vertical lines and text
@@ -132,9 +135,10 @@ if __name__ == "__main__":
     FONT_COLOR = 127  # BGR color (here, green)
 
     # Paths
-    TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories/2_separated_2024-06-09_14-46-59")
+    # TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories/2_separated_2024-06-09_14-46-59")
+    TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories/3_classified_pf")
     # tf: timeframe
-    FIGURE_OUTPUT_DIR = Path("output/figures/projection_and_hist") / f"tf{T_BUCKET_LENGTH_MS}ms_{DATETIME_STR}"
+    FIGURE_OUTPUT_DIR = Path("output/figures/projection_and_hist") / f"tf{T_BUCKET_LENGTH_MS}ms_tbr{BINS_PER_T_BUCKET}_{DATETIME_STR}"
 
 
     # zb "1_l-l-l_trajectories_2024-05-29_15-27-12"
@@ -150,8 +154,7 @@ if __name__ == "__main__":
     trajectory_dirs = [d for d in TRAJECTORIES_CSV_DIR.glob("*_trajectories*") if d.name not in existing_figure_dir_names]
 
     # FOR TESTING!
-    trajectory_dirs = [TRAJECTORIES_CSV_DIR / "6_h-h-h_filtered_trajectories"]
-    # trajectory_files = [TRAJECTORIES_CSV_DIR / "1_l-l-l_trajectories_2024-05-29_15-27-12/2.csv"]
+    # trajectory_dirs = [TRAJECTORIES_CSV_DIR / "6_h-h-h_filtered_trajectories"]
 
     for trajectory_dir in trajectory_dirs:
         # Extract trajectory dir simple name
@@ -262,47 +265,47 @@ if __name__ == "__main__":
             figure_filepath.parent.mkdir(exist_ok=True, parents=True)
             cv2_imwrite(figure_filepath, ty_heatmap_image)
 
+            # Save images of each individual bucket (WRNING: Creates many images)
+            if SAVE_BUCKET_IMAGES:
+                parts_output_dir_txproj = tra_output_dir / "parts" / "txproj"
+                parts_output_dir_txproj.mkdir(exist_ok=True, parents=True)
 
-            # Save images of full trajectory
-            parts_output_dir_txproj = tra_output_dir / "parts" / "txproj"
-            parts_output_dir_txproj.mkdir(exist_ok=True, parents=True)
+                parts_output_dir_typroj = tra_output_dir / "parts" / "typroj"
+                parts_output_dir_typroj.mkdir(exist_ok=True, parents=True)
 
-            parts_output_dir_typroj = tra_output_dir / "parts" / "typroj"
-            parts_output_dir_typroj.mkdir(exist_ok=True, parents=True)
+                # Create images of parts of the trajectory
+                for bucket_index in range(number_of_buckets-1):
+                    t_start = BINS_PER_T_BUCKET*bucket_index
+                    t_length = BINS_PER_T_BUCKET
+                    t_length_real = (t_length / BINS_PER_T_BUCKET) * T_BUCKET_LENGTH
+                    t_length_str = f"{(t_length_real / TIMESTEPS_PER_SECOND):0>2.2f}s"
+                    t_end = t_start+t_length
+                    event_count = event_count_per_bucket[bucket_index]
 
-            # Create images of parts of the trajectory
-            for bucket_index in range(number_of_buckets-1):
-                t_start = BINS_PER_T_BUCKET*bucket_index
-                t_length = BINS_PER_T_BUCKET
-                t_length_real = (t_length / BINS_PER_T_BUCKET) * T_BUCKET_LENGTH
-                t_length_str = f"{(t_length_real / TIMESTEPS_PER_SECOND):0>2.2f}s"
-                t_end = t_start+t_length
-                event_count = event_count_per_bucket[bucket_index]
+                    if event_count == 0:
+                        continue
 
-                if event_count == 0:
-                    continue
+                    # Crop on t axis
+                    tx_heatmap_tcrop = tx_heatmap[:,t_start:t_end]
+                    ty_heatmap_tcrop = ty_heatmap[:,t_start:t_end]
 
-                # Crop on t axis
-                tx_heatmap_tcrop = tx_heatmap[:,t_start:t_end]
-                ty_heatmap_tcrop = ty_heatmap[:,t_start:t_end]
+                    # Crop on y axis to used area
+                    ymin, ymax, xmin, xmax = arg_bbox(tx_heatmap_tcrop)
+                    tx_heatmap_tycrop = tx_heatmap_tcrop[ymin:ymax,:]
 
-                # Crop on y axis to used area
-                ymin, ymax, xmin, xmax = arg_bbox(tx_heatmap_tcrop)
-                tx_heatmap_tycrop = tx_heatmap_tcrop[ymin:ymax,:]
+                    # Crop on y axis to used area
+                    ymin, ymax, xmin, xmax = arg_bbox(ty_heatmap_tcrop)
+                    ty_heatmap_tycrop = ty_heatmap_tcrop[ymin:ymax,:]
 
-                # Crop on y axis to used area
-                ymin, ymax, xmin, xmax = arg_bbox(ty_heatmap_tcrop)
-                ty_heatmap_tycrop = ty_heatmap_tcrop[ymin:ymax,:]
+                    tx_heatmap_tycrop = hist2d_to_image(tx_heatmap_tycrop)
+                    ty_heatmap_tycrop = hist2d_to_image(ty_heatmap_tycrop)
 
-                tx_heatmap_tycrop = hist2d_to_image(tx_heatmap_tycrop)
-                ty_heatmap_tycrop = hist2d_to_image(ty_heatmap_tycrop)
+                    # Save tx-projection and ty-projection with OpenCV
+                    figure_filepath = parts_output_dir_txproj / f"{instance_id}_p{bucket_index}_txproj_{event_count}pts.png"
+                    cv2_imwrite(figure_filepath, tx_heatmap_tycrop)
 
-                # Save tx-projection and ty-projection with OpenCV
-                figure_filepath = parts_output_dir_txproj / f"{instance_id}_p{bucket_index}_txproj_{event_count}pts.png"
-                cv2_imwrite(figure_filepath, tx_heatmap_tycrop)
-
-                figure_filepath = parts_output_dir_typroj / f"{instance_id}_p{bucket_index}_typroj_{event_count}pts.png"
-                cv2_imwrite(figure_filepath, ty_heatmap_tycrop)
+                    figure_filepath = parts_output_dir_typroj / f"{instance_id}_p{bucket_index}_typroj_{event_count}pts.png"
+                    cv2_imwrite(figure_filepath, ty_heatmap_tycrop)
 
         #         break
         #     break

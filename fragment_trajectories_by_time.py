@@ -66,13 +66,17 @@ if __name__ == "__main__":
     # Timely width of a t-bucket in microseconds or milliseconds.
     # 1000 * 100 means 100ms. Thus events in each 100ms interval are collected in a t-bucket.
     # Butterfly has 20 wing beats per second (wbps), bee has 200wbps.
-    T_BUCKET_LENGTH = 1000 * 100
+    # T_BUCKET_LENGTH = 1000 * 100
+    T_BUCKET_LENGTH = 1000 * 4000 # 4s
     T_BUCKET_LENGTH_MS = int(T_BUCKET_LENGTH / TIMESTEPS_PER_SECOND * 1000)
     # This is our goal
     EVENTS_PER_FRAGMENT = 4096
     # Min number of events a fragment needs before adding or removing events
     MIN_EVENTS_COUNT = EVENTS_PER_FRAGMENT // 4
 
+    # If the csv contains a EVENTS_CSV_BB_CORNER_COL, 
+    # add bbox evemts to the resulting fragments or remove those events
+    ADD_BB_EVENTS = False
     SAVE_PARTIAL_TRAJECTORIES = True
     MIN_FILE_SIZE_BYTES = 100 * 1024 # 100KB
 
@@ -195,7 +199,7 @@ if __name__ == "__main__":
                     combined_df = pd.concat([fragment.events_df, additional_df])
                     fragment.events_df = combined_df
 
-                if EVENTS_CSV_BB_CORNER_COL is not None:
+                if EVENTS_CSV_BB_CORNER_COL is not None and ADD_BB_EVENTS:
                     # concat normal events and bbox events
                     fragment.events_df = pd.concat([fragment.events_df, bb_events_df])
                     # sort by t, then bb_corner_index

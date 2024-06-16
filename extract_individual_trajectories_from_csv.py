@@ -476,10 +476,8 @@ if __name__ == "__main__":
                     print("Skipping trajectory", id, ". No points!")
                     continue
                 
-                bbox_filename_part = "_bbox" if CREATE_BBOX_EVENTS else ""
-
                 output_dir_path = (OUTPUT_BASE_DIR / "_with_bboxes") if CREATE_BBOX_EVENTS else OUTPUT_BASE_DIR
-                output_dir_path = output_dir_path / f"{filestem}_trajectories{bbox_filename_part}"
+                output_dir_path = output_dir_path / f"{filestem}_trajectories"
                 output_dir_path.mkdir(parents=True, exist_ok=True)
 
                 output_file_path = output_dir_path / f"{id}_{trajectory.cla}_pts{len(trajectory.events)}_start{int(trajectory.first_timestamp)}.csv"

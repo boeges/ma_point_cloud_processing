@@ -1,5 +1,6 @@
 
 # Dirs
 output/
+__pycache__/
 
 desktop.ini
