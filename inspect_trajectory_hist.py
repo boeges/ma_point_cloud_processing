@@ -3,6 +3,7 @@
 import re
 import csv
 import cv2
+import json
 from datetime import datetime
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -92,6 +93,7 @@ if __name__ == "__main__":
 
     ADD_TIME_TO_FILENAME = True
     OVERWRITE_EXISTING = True
+    SAVE_STATISTICS = True
 
     WIDTH = 1280
     HEIGHT = 720
@@ -120,6 +122,8 @@ if __name__ == "__main__":
     # short: tbr: t bucket resolutions
     # BINS_PER_T_BUCKET = 250
     BINS_PER_T_BUCKET = int(T_BUCKET_LENGTH_MS * 2.5) # 250 for 100ms, 10000 for 4000ms
+    
+    SAVE_IMAGES = False
     # BINS_PER_T_BUCKET = T_BUCKET_LENGTH_MS # a bucket for every ms
     # For saving matplotlib images
     SAVE_IMAGE_DPI = 300
@@ -135,11 +139,34 @@ if __name__ == "__main__":
     FONT_COLOR = 127  # BGR color (here, green)
 
     # Paths
-    # TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories/2_separated_2024-06-09_14-46-59")
+    # TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories/2_separated_mu")
     TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories/3_classified_pf")
+    # TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories/3_classified_mu")
     # tf: timeframe
     FIGURE_OUTPUT_DIR = Path("output/figures/projection_and_hist") / f"tf{T_BUCKET_LENGTH_MS}ms_tbr{BINS_PER_T_BUCKET}_{DATETIME_STR}"
+    STATS_OUTPUT_DIR = Path("output/statistics/hist/") / f"tf{T_BUCKET_LENGTH_MS}ms_{DATETIME_STR}"
 
+    # stats = {
+    # <scene_name>: {
+    #   fields, 
+    #   trajectories: {
+    #       <traj_id>: {
+    #           fields, 
+    #           fragmentations: {
+    #               <fragmentation>: {
+    #                   fields, 
+    #                   fragments: {
+    #                       <frag_id>: {
+    #                           fields
+    #                       }
+    #                   }
+    #               }
+    #           }
+    #       }
+    #   }
+    # }}
+    stats = {}
+    fragments_stats = []
 
     # zb "1_l-l-l_trajectories_2024-05-29_15-27-12"
     dir_name_pattern = re.compile(r"^(.*)_trajectories")
@@ -162,7 +189,8 @@ if __name__ == "__main__":
         if len(matches) == 0:
             print("Skipping:", trajectory_dir.name, ", Doesnt match file name pattern!")
             continue
-        trajectory_dir_name = matches[0]
+        scene_name = matches[0]
+        stats.setdefault(scene_name, {"event_count": None, "length_s": None, "trajectories": {}})
 
         # Find all files from directory; Skip existing
         trajectory_files = [file for file in trajectory_dir.iterdir() if file.is_file()]
@@ -178,8 +206,14 @@ if __name__ == "__main__":
             clas = bee.parse_full_class_name(cla, "insect")
             pts = int(name_arr[2][3:])
             start_ts = int(name_arr[3][5:])
+            fragmentation_key = f"tf{T_BUCKET_LENGTH_MS}ms"
 
-            print(f"Processing: \"{trajectory_dir_name}/{instance_id}\" ({clas}) ({pts} points)")
+            traj_stats = stats[scene_name]["trajectories"].setdefault(int(instance_id), \
+                    {"event_count": None, "length_s": None, "fragmentations": {}})
+            fragmentation_stats = traj_stats["fragmentations"].setdefault(fragmentation_key, \
+                    {"time_frame_ms": T_BUCKET_LENGTH_MS, "fragments": {}})
+
+            print(f"Processing: \"{scene_name}/{instance_id}\" ({clas}) ({pts} points)")
 
             df = pd.read_csv(trajectory_filepath, sep=',', header="infer")
 
@@ -211,102 +245,136 @@ if __name__ == "__main__":
             # print(event_count_per_bucket.head())
             # print(event_count_per_bucket)
 
-            # colors for bars in events histogram
-            bar_colors = []
-            for x in event_count_per_bucket:
-                bar_colors.append(event_count_to_color(x, 4096))
+            if SAVE_STATISTICS:
+                STATS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-            # Project Trajectory to 2D plane: Only use (t,x) or (t,y)
-            tx_df, tx_heatmap, tx_extent = get_projected_heatmap(df, "t", "x", number_of_buckets*BINS_PER_T_BUCKET, WIDTH, number_of_buckets*T_BUCKET_LENGTH*T_SCALE)
-            ty_df, ty_heatmap, ty_extent = get_projected_heatmap(df, "t", "y", number_of_buckets*BINS_PER_T_BUCKET, HEIGHT, number_of_buckets*T_BUCKET_LENGTH*T_SCALE)
+                traj_stats["event_count"] = len(df)
+                traj_stats["length_s"] = max_t_real / TIMESTEPS_PER_SECOND
+                traj_stats["class"] = clas
 
-            # log_tx_heatmap = np.log2(tx_heatmap+1)
-            # log_ty_heatmap = np.log2(ty_heatmap+1)
-
-            if Y_CROP_FULL_TRAJ_IMAGES:
-                # Crop on y axis to used area
-                tx_heatmap_ycrop = y_crop_to_used_area(tx_heatmap, 50)
-                ty_heatmap_ycrop = y_crop_to_used_area(ty_heatmap, 50)
-            else:
-                tx_heatmap_ycrop = tx_heatmap
-                ty_heatmap_ycrop = ty_heatmap
-
-            tx_heatmap_image = hist2d_to_image(tx_heatmap_ycrop)
-            ty_heatmap_image = hist2d_to_image(ty_heatmap_ycrop)
-
-            if DRAW_T_TICKS:
-                tx_heatmap_image = draw_t_ticks_into_image(tx_heatmap_image, BINS_PER_T_BUCKET)
-                ty_heatmap_image = draw_t_ticks_into_image(ty_heatmap_image, BINS_PER_T_BUCKET)
-
-            fig, axs = plt.subplots(3, gridspec_kw={'height_ratios': [1280,720,500]})
-            fig.set_size_inches(20, 8)
-            fig.suptitle(f't-x-, t-y-projection and event histogram of "{trajectory_dir_name}/{instance_id}" ({clas}) (length: {max_t_str}, {pts} points)')
-            axs[0].imshow(tx_heatmap_image, origin='upper', cmap="gray", aspect="auto")
-            axs[1].imshow(ty_heatmap_image, origin='upper', cmap="gray", aspect="auto")
-            axs[2].set_xlim(left=0, right=number_of_buckets)
-            axs[2].bar(list(range(number_of_buckets)), event_count_per_bucket, width=1.0, align="edge", color=bar_colors)
-
-            # Save images of full trajectory
-            tra_output_dir = FIGURE_OUTPUT_DIR  / trajectory_filepath.parent.name
-            tra_output_dir.mkdir(exist_ok=True, parents=True)
-
-            # Save detailled image
-            figure_filepath = tra_output_dir / "detailled" / f"{filestem}_detailled.png"
-            figure_filepath.parent.mkdir(exist_ok=True, parents=True)
-            plt.savefig(figure_filepath, format="png", bbox_inches="tight", dpi=SAVE_IMAGE_DPI)
-            plt.close()
-
-            # Save tx-projection and ty-projection with OpenCV
-            figure_filepath = tra_output_dir / "txproj" / f"{filestem}_txproj.png"
-            figure_filepath.parent.mkdir(exist_ok=True, parents=True)
-            cv2_imwrite(figure_filepath, tx_heatmap_image)
-
-            figure_filepath = tra_output_dir / "typroj" / f"{filestem}_typroj.png"
-            figure_filepath.parent.mkdir(exist_ok=True, parents=True)
-            cv2_imwrite(figure_filepath, ty_heatmap_image)
-
-            # Save images of each individual bucket (WRNING: Creates many images)
-            if SAVE_BUCKET_IMAGES:
-                parts_output_dir_txproj = tra_output_dir / "parts" / "txproj"
-                parts_output_dir_txproj.mkdir(exist_ok=True, parents=True)
-
-                parts_output_dir_typroj = tra_output_dir / "parts" / "typroj"
-                parts_output_dir_typroj.mkdir(exist_ok=True, parents=True)
-
-                # Create images of parts of the trajectory
-                for bucket_index in range(number_of_buckets-1):
+                # Iterate fragments
+                for bucket_index in range(number_of_buckets):
                     t_start = BINS_PER_T_BUCKET*bucket_index
                     t_length = BINS_PER_T_BUCKET
                     t_length_real = (t_length / BINS_PER_T_BUCKET) * T_BUCKET_LENGTH
-                    t_length_str = f"{(t_length_real / TIMESTEPS_PER_SECOND):0>2.2f}s"
                     t_end = t_start+t_length
                     event_count = event_count_per_bucket[bucket_index]
 
-                    if event_count == 0:
-                        continue
+                    fragment_stats = fragmentation_stats["fragments"].setdefault(bucket_index, {})
+                    # fragment_stats["t_start_s"] = t_start / TIMESTEPS_PER_SECOND
+                    # fragment_stats["t_length_s"] = t_length_real
+                    # fragment_stats["t_end_s"] = t_end / TIMESTEPS_PER_SECOND
+                    fragment_stats["event_count"] = int(event_count)
 
-                    # Crop on t axis
-                    tx_heatmap_tcrop = tx_heatmap[:,t_start:t_end]
-                    ty_heatmap_tcrop = ty_heatmap[:,t_start:t_end]
+                    # Columns: scene, instance_id, fragment_id, class, traj_evnt_count, traj_len_s, frag_evnt_count, frag_len_s
+                    fragments_stats.append( [scene_name, int(instance_id), bucket_index, clas, len(df), traj_stats["length_s"], int(event_count), t_length_real/TIMESTEPS_PER_SECOND] )
 
+            if SAVE_IMAGES:
+                # colors for bars in events histogram
+                bar_colors = []
+                for x in event_count_per_bucket:
+                    bar_colors.append(event_count_to_color(x, 4096))
+
+                # Project Trajectory to 2D plane: Only use (t,x) or (t,y)
+                tx_df, tx_heatmap, tx_extent = get_projected_heatmap(df, "t", "x", number_of_buckets*BINS_PER_T_BUCKET, WIDTH, number_of_buckets*T_BUCKET_LENGTH*T_SCALE)
+                ty_df, ty_heatmap, ty_extent = get_projected_heatmap(df, "t", "y", number_of_buckets*BINS_PER_T_BUCKET, HEIGHT, number_of_buckets*T_BUCKET_LENGTH*T_SCALE)
+
+                # log_tx_heatmap = np.log2(tx_heatmap+1)
+                # log_ty_heatmap = np.log2(ty_heatmap+1)
+
+                if Y_CROP_FULL_TRAJ_IMAGES:
                     # Crop on y axis to used area
-                    ymin, ymax, xmin, xmax = arg_bbox(tx_heatmap_tcrop)
-                    tx_heatmap_tycrop = tx_heatmap_tcrop[ymin:ymax,:]
+                    tx_heatmap_ycrop = y_crop_to_used_area(tx_heatmap, 50)
+                    ty_heatmap_ycrop = y_crop_to_used_area(ty_heatmap, 50)
+                else:
+                    tx_heatmap_ycrop = tx_heatmap
+                    ty_heatmap_ycrop = ty_heatmap
 
-                    # Crop on y axis to used area
-                    ymin, ymax, xmin, xmax = arg_bbox(ty_heatmap_tcrop)
-                    ty_heatmap_tycrop = ty_heatmap_tcrop[ymin:ymax,:]
+                tx_heatmap_image = hist2d_to_image(tx_heatmap_ycrop)
+                ty_heatmap_image = hist2d_to_image(ty_heatmap_ycrop)
 
-                    tx_heatmap_tycrop = hist2d_to_image(tx_heatmap_tycrop)
-                    ty_heatmap_tycrop = hist2d_to_image(ty_heatmap_tycrop)
+                if DRAW_T_TICKS:
+                    tx_heatmap_image = draw_t_ticks_into_image(tx_heatmap_image, BINS_PER_T_BUCKET)
+                    ty_heatmap_image = draw_t_ticks_into_image(ty_heatmap_image, BINS_PER_T_BUCKET)
 
-                    # Save tx-projection and ty-projection with OpenCV
-                    figure_filepath = parts_output_dir_txproj / f"{instance_id}_p{bucket_index}_txproj_{event_count}pts.png"
-                    cv2_imwrite(figure_filepath, tx_heatmap_tycrop)
+                fig, axs = plt.subplots(3, gridspec_kw={'height_ratios': [1280,720,500]})
+                fig.set_size_inches(20, 8)
+                fig.suptitle(f't-x-, t-y-projection and event histogram of "{scene_name}/{instance_id}" ({clas}) (length: {max_t_str}, {pts} points)')
+                axs[0].imshow(tx_heatmap_image, origin='upper', cmap="gray", aspect="auto")
+                axs[1].imshow(ty_heatmap_image, origin='upper', cmap="gray", aspect="auto")
+                axs[2].set_xlim(left=0, right=number_of_buckets)
+                axs[2].bar(list(range(number_of_buckets)), event_count_per_bucket, width=1.0, align="edge", color=bar_colors)
 
-                    figure_filepath = parts_output_dir_typroj / f"{instance_id}_p{bucket_index}_typroj_{event_count}pts.png"
-                    cv2_imwrite(figure_filepath, ty_heatmap_tycrop)
+                # Save images of full trajectory
+                tra_output_dir = FIGURE_OUTPUT_DIR  / trajectory_filepath.parent.name
+                tra_output_dir.mkdir(exist_ok=True, parents=True)
+
+                # Save detailled image
+                figure_filepath = tra_output_dir / "detailled" / f"{filestem}_detailled.png"
+                figure_filepath.parent.mkdir(exist_ok=True, parents=True)
+                plt.savefig(figure_filepath, format="png", bbox_inches="tight", dpi=SAVE_IMAGE_DPI)
+                plt.close()
+
+                # Save tx-projection and ty-projection with OpenCV
+                figure_filepath = tra_output_dir / "txproj" / f"{filestem}_txproj.png"
+                figure_filepath.parent.mkdir(exist_ok=True, parents=True)
+                cv2_imwrite(figure_filepath, tx_heatmap_image)
+
+                figure_filepath = tra_output_dir / "typroj" / f"{filestem}_typroj.png"
+                figure_filepath.parent.mkdir(exist_ok=True, parents=True)
+                cv2_imwrite(figure_filepath, ty_heatmap_image)
+
+                # Save images of each individual bucket (WRNING: Creates many images)
+                if SAVE_BUCKET_IMAGES:
+                    parts_output_dir_txproj = tra_output_dir / "parts" / "txproj"
+                    parts_output_dir_txproj.mkdir(exist_ok=True, parents=True)
+
+                    parts_output_dir_typroj = tra_output_dir / "parts" / "typroj"
+                    parts_output_dir_typroj.mkdir(exist_ok=True, parents=True)
+
+                    # Create images of parts of the trajectory
+                    for bucket_index in range(number_of_buckets):
+                        t_start = BINS_PER_T_BUCKET*bucket_index
+                        t_length = BINS_PER_T_BUCKET
+                        t_length_real = (t_length / BINS_PER_T_BUCKET) * T_BUCKET_LENGTH
+                        t_length_str = f"{(t_length_real / TIMESTEPS_PER_SECOND):0>2.2f}s"
+                        t_end = t_start+t_length
+                        event_count = event_count_per_bucket[bucket_index]
+
+                        if event_count == 0:
+                            continue
+
+                        # Crop on t axis
+                        tx_heatmap_tcrop = tx_heatmap[:,t_start:t_end]
+                        ty_heatmap_tcrop = ty_heatmap[:,t_start:t_end]
+
+                        # Crop on y axis to used area
+                        ymin, ymax, xmin, xmax = arg_bbox(tx_heatmap_tcrop)
+                        tx_heatmap_tycrop = tx_heatmap_tcrop[ymin:ymax,:]
+
+                        # Crop on y axis to used area
+                        ymin, ymax, xmin, xmax = arg_bbox(ty_heatmap_tcrop)
+                        ty_heatmap_tycrop = ty_heatmap_tcrop[ymin:ymax,:]
+
+                        tx_heatmap_tycrop = hist2d_to_image(tx_heatmap_tycrop)
+                        ty_heatmap_tycrop = hist2d_to_image(ty_heatmap_tycrop)
+
+                        # Save tx-projection and ty-projection with OpenCV
+                        figure_filepath = parts_output_dir_txproj / f"{instance_id}_p{bucket_index}_txproj_{event_count}pts.png"
+                        cv2_imwrite(figure_filepath, tx_heatmap_tycrop)
+
+                        figure_filepath = parts_output_dir_typroj / f"{instance_id}_p{bucket_index}_typroj_{event_count}pts.png"
+                        cv2_imwrite(figure_filepath, ty_heatmap_tycrop)
 
         #         break
         #     break
         # break
+
+    if SAVE_STATISTICS:
+        with open(STATS_OUTPUT_DIR / "all.json", "w") as outfile:
+            json.dump(stats, outfile)
+
+    fragments_df = pd.DataFrame(fragments_stats, \
+            columns=["scene", "instance_id", "fragment_id", "class", "traj_evnt_count", "traj_len_s", "frag_evnt_count", "frag_len_s"])
+    fragments_df.to_csv(STATS_OUTPUT_DIR / "all_fragments.csv", index=False, header=True, decimal='.', sep=',', float_format='%.3f')
+    print(fragments_df)
