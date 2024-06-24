@@ -18,8 +18,9 @@ import open3d as o3d
 # print(xyz)
 
 # trajectory_filepath = "output/open3d test/0_bee_pts22690_start16708.csv"
-trajectory_filepath = "output/open3d test/12_bee_pts4069_start6239878.csv"
+# trajectory_filepath = "output/open3d test/12_bee_pts4069_start6239878.csv"
 # trajectory_filepath = "output/open3d test/2_but_pts186800_start9271072/frag_37.csv"
+trajectory_filepath = "output/open3d test/6_dra_pts78465_start29351165/frag_2.csv"
 
 # Load point cloud
 df = pd.read_csv(trajectory_filepath, sep=',', header="infer")
@@ -35,15 +36,33 @@ pcd.points = o3d.utility.Vector3dVector(xyz)
 pcd.paint_uniform_color([0.0, 0.2, 1.0])
 
 # SOR
-sor_pcd, ind = pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
-sor_pcd.translate((50, 0, 0))
-print("SOR:", len(sor_pcd.points), "points")
+# sor_pcd, ind = pcd.remove_statistical_outlier(nb_neighbors=10, std_ratio=2.0)
+# sor_pcd.translate((100, 0, 0))
+# print("SOR 10 2.0:", len(sor_pcd.points), "points")
+
+sor_params = [
+    (5,2.0),
+    (5,3.0),
+    (10,2.0),
+    (10,3.0),
+    (20,2.0),
+    (20,3.0),
+    (40,2.0),
+    (40,3.0),
+]
+
+sor_pcds = []
+for i,para in enumerate(sor_params):
+    sor_pcd, ind = pcd.remove_statistical_outlier(nb_neighbors=para[0], std_ratio=para[1])
+    sor_pcd.translate(((i+1)*100, 0, 0))
+    sor_pcds.append(sor_pcd)
+    print(f"SOR {para[0]} {para[1]}: {len(sor_pcd.points): >5} points")
+
 
 # Farthes point sampling; After SOR
-sampled_pcd = sor_pcd.farthest_point_down_sample(1000)
-# sampled_pcd = pcd.select_by_mask(sampled_pcd)
-sampled_pcd.translate((100, 0, 0))
-
+# sampled_pcd = sor_pcd.farthest_point_down_sample(1000)
+# # sampled_pcd = pcd.select_by_mask(sampled_pcd)
+# sampled_pcd.translate((100, 0, 0))
 
 
 # Make BBox and best fit BBox around this pointcloud
@@ -63,7 +82,7 @@ sampled_pcd.translate((100, 0, 0))
 
 
 # Visualize
-o3d.visualization.draw([pcd, sampled_pcd, sor_pcd])
+o3d.visualization.draw_geometries([pcd] + sor_pcds)
 # o3d.visualization.draw(
 #     [pcd, axis_aligned_bounding_box, oriented_bounding_box])
 
@@ -71,3 +90,5 @@ o3d.visualization.draw([pcd, sampled_pcd, sor_pcd])
 # xyz_converted = np.asarray(pcd.points)
 # print("Printing numpy array made using Open3D pointcloud ...")
 # print(xyz_converted)
+
+print("End.")
