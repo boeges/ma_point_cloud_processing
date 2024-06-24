@@ -8,6 +8,7 @@
 import csv
 import numpy as np
 import pandas as pd
+import open3d as o3d
 from datetime import datetime
 from pathlib import Path
 
@@ -53,7 +54,7 @@ if __name__ == "__main__":
 
     # Paths
     # TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories") / "2_separated_2024-06-09_14-46-59" / "_with_bboxes"
-    TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories") / "3_classified_pf1" / "_with_bboxes"
+    TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories") / "3_classified_pf"
 
 
     # Precision of the timestamp in fractions per second.
@@ -66,16 +67,19 @@ if __name__ == "__main__":
     # Timely width of a t-bucket in microseconds or milliseconds.
     # 1000 * 100 means 100ms. Thus events in each 100ms interval are collected in a t-bucket.
     # Butterfly has 20 wing beats per second (wbps), bee has 200wbps.
-    # T_BUCKET_LENGTH = 1000 * 100
-    T_BUCKET_LENGTH = 1000 * 4000 # 4s
+    T_BUCKET_LENGTH = 1000 * 100
+    # T_BUCKET_LENGTH = 1000 * 4000 # 4s
     T_BUCKET_LENGTH_MS = int(T_BUCKET_LENGTH / TIMESTEPS_PER_SECOND * 1000)
-    # This is our goal
-    EVENTS_PER_FRAGMENT = 4096
+    # This is our target event count per fragment; Use "all" to keep original event count
+    EVENTS_PER_FRAGMENT = "all"
+    # EVENTS_PER_FRAGMENT = 4096
     # Min number of events a fragment needs before adding or removing events
-    MIN_EVENTS_COUNT = EVENTS_PER_FRAGMENT // 4
+    MIN_EVENTS_COUNT = 2048
+    DOWNSAMPLE_METHOD = "random" # "random", "farthest_point"
+    NOISE_REDUCTION_METHOD = "sor" # "none", "sor" = statistical outlier removal
 
     # If the csv contains a EVENTS_CSV_BB_CORNER_COL, 
-    # add bbox evemts to the resulting fragments or remove those events
+    # add bbox events to the resulting fragments or remove those events
     ADD_BB_EVENTS = False
     SAVE_PARTIAL_TRAJECTORIES = True
     MIN_FILE_SIZE_BYTES = 100 * 1024 # 100KB
@@ -98,7 +102,7 @@ if __name__ == "__main__":
     ]
 
     for scene in scenes:
-        csv_dir = TRAJECTORIES_CSV_DIR / f"{scene}_trajectories_bbox"
+        csv_dir = TRAJECTORIES_CSV_DIR / f"{scene}_trajectories"
         output_base_dir = csv_dir / f"fragments_time_{T_BUCKET_LENGTH_MS}ms_{EVENTS_PER_FRAGMENT}pts{DATETIME_STR_PREFIX}"
 
         print(f"\nProcessing dir: {csv_dir}")
@@ -162,10 +166,11 @@ if __name__ == "__main__":
 
             # print("Fragmented trajectory into", len(fragments), "fragments")
 
-            # Throw away fragments with too few events
             orig_fragment_count = len(fragments)
-            fragments = [f for f in fragments if len(f.events) >= MIN_EVENTS_COUNT]
-            # print(f"Filtered out {orig_fragment_count-len(fragments)} fragments with too few events")
+
+            # Throw away fragments with too few events
+            if MIN_EVENTS_COUNT is not None:
+                fragments = [f for f in fragments if len(f.events) >= MIN_EVENTS_COUNT]
 
             for fragment in fragments:
                 fragment.original_event_count = len(fragment.events)
@@ -182,22 +187,41 @@ if __name__ == "__main__":
                     fragment.events_df = fragment.events_df.loc[fragment.events_df["bb_corner_index"].astype(int) == -1]
                     fragment.original_event_count -= len(bb_events_df.index)
 
-                # remove points if number of points is > EVENTS_PER_TRAJECTORY
-                if fragment.original_event_count > EVENTS_PER_FRAGMENT:
-                    # frag_df = pd.DataFrame(data=fragment.events, columns=["x","y","t"])
-                    # Use random sampling to choose subset of events
-                    reduced_df = fragment.events_df.sample(n=EVENTS_PER_FRAGMENT, replace=False, random_state=0)
-                    fragment.events_df = reduced_df
+                # Add or remove points by sampling to get exactly EVENTS_PER_FRAGMENT points
+                if EVENTS_PER_FRAGMENT != "all":
+                    # remove points if number of points is > EVENTS_PER_TRAJECTORY
+                    if fragment.original_event_count > EVENTS_PER_FRAGMENT:
+                        # Create open3d point cloud and downsample
+                        xyz = fragment.events_df.to_numpy(dtype=np.float32)
+                        pcd = o3d.geometry.PointCloud()
+                        pcd.points = o3d.utility.Vector3dVector(xyz)
+                        
+                        # Noise reduction
+                        if NOISE_REDUCTION_METHOD == "sor":
+                            # TODO add noise reduction
+                            pass
 
-                # add points if number of points is < EVENTS_PER_TRAJECTORY
-                elif fragment.original_event_count < EVENTS_PER_FRAGMENT:
-                    # frag_df = pd.DataFrame(data=fragment.events, columns=["x","y","t"])
-                    # Use random sampling to duplicate as many existing events as are required to achive EVENTS_PER_TRAJECTORY. 
-                    # Samples can be chosen multiple times
-                    additional_df = fragment.events_df.sample(n=EVENTS_PER_FRAGMENT-len(fragment.events_df), replace=True, random_state=0)
-                    # combine original events and created events
-                    combined_df = pd.concat([fragment.events_df, additional_df])
-                    fragment.events_df = combined_df
+                        # Downsample
+                        if DOWNSAMPLE_METHOD == "random":
+                            # Use random sampling to choose subset of events
+                            reduced_df = fragment.events_df.sample(n=EVENTS_PER_FRAGMENT, replace=False, random_state=0)
+                        elif DOWNSAMPLE_METHOD == "farthest_point":
+                            
+                            pcd = pcd.farthest_point_down_sample(EVENTS_PER_FRAGMENT)
+                        else:
+                            raise NotImplementedError("DOWNSAMPLE_METHOD " + str(DOWNSAMPLE_METHOD) + " not implemented!")
+
+                        fragment.events_df = reduced_df
+
+                    # add points if number of points is < EVENTS_PER_TRAJECTORY
+                    elif fragment.original_event_count < EVENTS_PER_FRAGMENT:
+                        # frag_df = pd.DataFrame(data=fragment.events, columns=["x","y","t"])
+                        # Use random sampling to duplicate as many existing events as are required to achive EVENTS_PER_TRAJECTORY. 
+                        # Samples can be chosen multiple times
+                        additional_df = fragment.events_df.sample(n=EVENTS_PER_FRAGMENT-len(fragment.events_df), replace=True, random_state=0)
+                        # combine original events and created events
+                        combined_df = pd.concat([fragment.events_df, additional_df])
+                        fragment.events_df = combined_df
 
                 if EVENTS_CSV_BB_CORNER_COL is not None and ADD_BB_EVENTS:
                     # concat normal events and bbox events

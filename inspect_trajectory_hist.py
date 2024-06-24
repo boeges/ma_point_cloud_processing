@@ -93,7 +93,6 @@ if __name__ == "__main__":
 
     ADD_TIME_TO_FILENAME = True
     OVERWRITE_EXISTING = True
-    SAVE_STATISTICS = True
 
     WIDTH = 1280
     HEIGHT = 720
@@ -123,7 +122,8 @@ if __name__ == "__main__":
     # BINS_PER_T_BUCKET = 250
     BINS_PER_T_BUCKET = int(T_BUCKET_LENGTH_MS * 2.5) # 250 for 100ms, 10000 for 4000ms
     
-    SAVE_IMAGES = False
+    SAVE_STATISTICS = False
+    SAVE_IMAGES = True
     # BINS_PER_T_BUCKET = T_BUCKET_LENGTH_MS # a bucket for every ms
     # For saving matplotlib images
     SAVE_IMAGE_DPI = 300
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     # Whether to crop images of the full flight trajectories to their used y areas
     Y_CROP_FULL_TRAJ_IMAGES = False
     # Draw ticks, vertical lines and text
-    DRAW_T_TICKS = True
+    DRAW_T_TICKS = False
     # For text of ticks
     FONT = cv2.FONT_HERSHEY_SIMPLEX
     FONT_SCALE = 0.5
