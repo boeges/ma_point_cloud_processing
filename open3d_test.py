@@ -21,17 +21,26 @@ import open3d as o3d
 # trajectory_filepath = "output/open3d test/12_bee_pts4069_start6239878.csv"
 # trajectory_filepath = "output/open3d test/2_but_pts186800_start9271072/frag_37.csv"
 trajectory_filepath = "output/open3d test/6_dra_pts78465_start29351165/frag_2.csv"
+# trajectory_filepath = "output/open3d test/21_dra_pts55549_start103333374/frag_3.csv"
 
 # Load point cloud
 df = pd.read_csv(trajectory_filepath, sep=',', header="infer")
 df = df.iloc[:,:3]
 print(df)
+
+# Scale t again! Applied on first t scale!
+SECOND_T_SCALE = 1.0
+# df["t"] = df["t"].apply(lambda x: x*0.5)
+
 xyz = df.to_numpy(dtype=np.float32)
 print(xyz.shape[0], "points")
+
+xyz = xyz * np.array([1.0, 1.0, SECOND_T_SCALE])
 
 # Pass xyz to Open3D.o3d.geometry.PointCloud and visualize.
 pcd = o3d.geometry.PointCloud()
 pcd.points = o3d.utility.Vector3dVector(xyz)
+
 # Add color and estimate normals for better visualization.
 pcd.paint_uniform_color([0.0, 0.2, 1.0])
 
@@ -41,19 +50,31 @@ pcd.paint_uniform_color([0.0, 0.2, 1.0])
 # print("SOR 10 2.0:", len(sor_pcd.points), "points")
 
 sor_params = [
-    (5,2.0),
-    (5,3.0),
-    (10,2.0),
-    (10,3.0),
-    (20,2.0),
-    (20,3.0),
-    (40,2.0),
-    (40,3.0),
+    (5,4.0),
+    (5,6.0),
+    (10,4.0),
+    (10,6.0),
+    (20,4.0),
+    (20,6.0),
+    (40,4.0),
+    (40,6.0),
+]
+radius_params = [
+    (5,4.0),
+    (5,8.0),
+    (5,16.0),
+    (10,4.0),
+    (10,8.0),
+    (10,16.0),
+    (20,4.0),
+    (20,8.0),
+    (20,16.0),
 ]
 
 sor_pcds = []
-for i,para in enumerate(sor_params):
-    sor_pcd, ind = pcd.remove_statistical_outlier(nb_neighbors=para[0], std_ratio=para[1])
+for i,para in enumerate(radius_params):
+    # sor_pcd, ind = pcd.remove_statistical_outlier(nb_neighbors=para[0], std_ratio=para[1])
+    sor_pcd, ind = pcd.remove_radius_outlier(nb_points=para[0], radius=para[1])
     sor_pcd.translate(((i+1)*100, 0, 0))
     sor_pcds.append(sor_pcd)
     print(f"SOR {para[0]} {para[1]}: {len(sor_pcd.points): >5} points")
@@ -80,9 +101,15 @@ for i,para in enumerate(sor_params):
 # colors[labels < 0] = 0
 # pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
 
+pcds = [pcd] + sor_pcds
+
+for i,pcd in enumerate(pcds):
+    pcd.points = o3d.utility.Vector3dVector(
+        np.asarray(pcd.points) * np.array([1.0, 1.0, 1/SECOND_T_SCALE]) )
+
 
 # Visualize
-o3d.visualization.draw_geometries([pcd] + sor_pcds)
+o3d.visualization.draw_geometries(pcds)
 # o3d.visualization.draw(
 #     [pcd, axis_aligned_bounding_box, oriented_bounding_box])
 
