@@ -20,6 +20,8 @@ class Fragment:
         self.index = None
         self.start = None
         self.original_event_count = None
+        self.noise_reduced_event_count = None
+        self.sampled_event_count = None
         # original events
         self.events = []
         # processed events as dataframe
@@ -97,11 +99,11 @@ if __name__ == "__main__":
     # T_BUCKET_LENGTH = 1000 * 4000 # 4s
     T_BUCKET_LENGTH_MS = int(T_BUCKET_LENGTH / TIMESTEPS_PER_SECOND * 1000)
     # This is our target event count per fragment; Use "all" to keep original event count
-    EVENTS_PER_FRAGMENT = "all"
-    # EVENTS_PER_FRAGMENT = 4096
-    MIN_EVENTS_COUNT = 2048
+    # EVENTS_PER_FRAGMENT = "all"
+    EVENTS_PER_FRAGMENT = 4096
     # Min number of events a fragment needs before adding or removing events
-    DOWNSAMPLE_METHOD = "random" # "random", "farthest_point"
+    MIN_EVENTS_COUNT = EVENTS_PER_FRAGMENT//2
+    DOWNSAMPLE_METHOD = "farthest_point" # "random", "farthest_point"
     NOISE_REDUCTION_METHOD = "sor" # "none", "sor" = statistical outlier removal
 
     ### Paths
@@ -229,6 +231,9 @@ if __name__ == "__main__":
             # print("Fragmented trajectory into", len(fragments), "fragments")
 
             orig_fragment_count = len(fragments)
+            upsampled_count = 0 
+            downsampled_count = 0 
+            upsampled_count = 0 
 
             # Throw away fragments with too few events
             if MIN_EVENTS_COUNT is not None:
@@ -248,35 +253,42 @@ if __name__ == "__main__":
                     bb_events_df = fragment.events_df.loc[fragment.events_df["bb_corner_index"].astype(int) >= 0]
                     fragment.events_df = fragment.events_df.loc[fragment.events_df["bb_corner_index"].astype(int) == -1]
                     fragment.original_event_count -= len(bb_events_df.index)
-
+                
                 # Add or remove points by sampling to get exactly EVENTS_PER_FRAGMENT points
                 if EVENTS_PER_FRAGMENT != "all":
-                    # remove points if number of points is > EVENTS_PER_TRAJECTORY
-                    if fragment.original_event_count > EVENTS_PER_FRAGMENT:
-                        # Create open3d point cloud and downsample
-                        xyz = fragment.events_df.to_numpy(dtype=np.float32)
-                        pcd = o3d.geometry.PointCloud()
-                        pcd.points = o3d.utility.Vector3dVector(xyz)
-                        
-                        # Noise reduction
-                        if NOISE_REDUCTION_METHOD == "sor":
-                            # TODO add noise reduction
-                            pass
+                    # Create open3d point cloud
+                    fragment.events_df = fragment.events_df[["x","y","t"]]
+                    xyz = fragment.events_df.to_numpy(dtype=np.float32)
+                    pcd = o3d.geometry.PointCloud()
+                    pcd.points = o3d.utility.Vector3dVector(xyz)
+                    
+                    # Noise reduction
+                    if NOISE_REDUCTION_METHOD == "sor":
+                        pcd, ind = pcd.remove_statistical_outlier(nb_neighbors=40, std_ratio=6.0)
+                    elif NOISE_REDUCTION_METHOD == "radius":
+                        pcd, ind = pcd.remove_radius_outlier(10, 16.0)
+                    fragment.noise_reduced_event_count = len(pcd.points)
 
+                    # remove points if number of points is > EVENTS_PER_TRAJECTORY
+                    if len(pcd.points) > EVENTS_PER_FRAGMENT:
                         # Downsample
                         if DOWNSAMPLE_METHOD == "random":
+                            # FIRST convert point cloud  back to pandas df
+                            fragment.events_df = pd.DataFrame(data=np.array(pcd.points), columns=["x","y","t"])
                             # Use random sampling to choose subset of events
-                            reduced_df = fragment.events_df.sample(n=EVENTS_PER_FRAGMENT, replace=False, random_state=0)
+                            fragment.events_df = fragment.events_df.sample(n=EVENTS_PER_FRAGMENT, replace=False, random_state=0)
                         elif DOWNSAMPLE_METHOD == "farthest_point":
-                            
                             pcd = pcd.farthest_point_down_sample(EVENTS_PER_FRAGMENT)
+                            fragment.events_df = pd.DataFrame(data=np.array(pcd.points), columns=["x","y","t"])
                         else:
                             raise NotImplementedError("DOWNSAMPLE_METHOD " + str(DOWNSAMPLE_METHOD) + " not implemented!")
-
-                        fragment.events_df = reduced_df
+                        downsampled_count += 1
 
                     # add points if number of points is < EVENTS_PER_TRAJECTORY
-                    elif fragment.original_event_count < EVENTS_PER_FRAGMENT:
+                    elif len(pcd.points) < EVENTS_PER_FRAGMENT:
+                        # Upsample
+                        # FIRST Convert back to pandas df
+                        fragment.events_df = pd.DataFrame(data=np.array(pcd.points), columns=["x","y","t"])
                         # frag_df = pd.DataFrame(data=fragment.events, columns=["x","y","t"])
                         # Use random sampling to duplicate as many existing events as are required to achive EVENTS_PER_TRAJECTORY. 
                         # Samples can be chosen multiple times
@@ -284,6 +296,9 @@ if __name__ == "__main__":
                         # combine original events and created events
                         combined_df = pd.concat([fragment.events_df, additional_df])
                         fragment.events_df = combined_df
+                        upsampled_count += 1
+
+                fragment.sampled_event_count = len(fragment.events_df.index)
 
                 if EVENTS_CSV_BB_CORNER_COL is not None and ADD_BB_EVENTS:
                     # concat normal events and bbox events
@@ -294,8 +309,11 @@ if __name__ == "__main__":
                     # sort by t
                     fragment.events_df = fragment.events_df.sort_values("t")
 
+                print(f"Fragment {instance_id}/{fragment.index}: orig_evts={fragment.original_event_count} "\
+                      + f"nr_evt_count={fragment.noise_reduced_event_count} sampled_evt_count={fragment.sampled_event_count}")
 
-            print(f"Fragmented into {orig_fragment_count: >2} fragments; {len(fragments): >2} have enough events")
+            print(f"Trajectory {instance_id}: orig_fragments={orig_fragment_count} remaining_fragments={len(fragments)} "\
+                  + f"upsampled={upsampled_count} downsampeld={downsampled_count}")
 
             # for i, fragment in enumerate(fragments):
             #     print(f"- Fragment {fragment.index: >3}: evts:{len(fragment.events): >5}, orig_evts:{fragment.original_event_count: >5}, start:{fragment.start/T_SCALE/TIMESTEPS_PER_SECOND: >5.2f}s")
