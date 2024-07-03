@@ -6,11 +6,13 @@
 # TODO move points in (x,y) around origin?
 
 import csv
+import json
 import numpy as np
 import pandas as pd
 import open3d as o3d
 from datetime import datetime
 from pathlib import Path
+import bee_utils as bee
 
 
 class Fragment:
@@ -23,21 +25,47 @@ class Fragment:
         # processed events as dataframe
         self.events_df = None
 
-def indexOrDefault(l, value, default):
+def index_or_default(l, value, default):
     try:
         return l.index(value)
     except ValueError:
         return default
 
+# Make and store json of local variables/options
+def get_options_json(option_names, vars, json_path=None):
+    options = {}
+    for name in option_names:
+        val = vars[name]
+        try:
+            if isinstance(val, (str, int, float, list, bool)):
+                options[name] = val
+            elif isinstance(val, Path):
+                options[name] = str(val)
+            else:
+                options[name] = "unsupported type: " + str(type(val))
+        except Exception:
+            options[name] = "dangerously unsupported type: " + str(type(val))
+    if json_path is not None:
+        json.dump(options, open(json_path, "w"), indent=2)
+        print("Stored options json to", str(json_path))
+    return options
+
+
 ############################ MAIN ##################################
 if __name__ == "__main__":
+    ### OUTPUT options
     DATETIME_STR = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     ADD_TIME_TO_FILENAME = True
     DATETIME_STR_PREFIX = ('_'+DATETIME_STR) if ADD_TIME_TO_FILENAME else ''
-
-    PRINT_PROGRESS_EVERY_N_PERCENT = 1
-
+    # If the csv contains a EVENTS_CSV_BB_CORNER_COL, 
+    # add bbox events to the resulting fragments or remove those events
+    ADD_BB_EVENTS = False
+    SAVE_PARTIAL_TRAJECTORIES = True
     OVERWRITE_EXISTING = True
+    OUTPUT_DIR_MODE = "dataset_dir" # "parent_dir", "dataset_dir"
+
+    ### DEBUG
+    PRINT_PROGRESS_EVERY_N_PERCENT = 1
 
     ############### PF #############
     WIDTH = 1280
@@ -52,11 +80,9 @@ if __name__ == "__main__":
     EVENTS_CSV_FRAME_INDEX_COL = None
     EVENTS_CSV_BB_CORNER_COL = None
 
-    # Paths
-    # TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories") / "2_separated_2024-06-09_14-46-59" / "_with_bboxes"
-    TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories") / "3_classified_pf"
+    
 
-
+    MIN_FILE_SIZE_BYTES = 100 * 1024 # 100KB
     # Precision of the timestamp in fractions per second.
     # For mikroseconds: 1000000, for milliseconds: 1000
     TIMESTEPS_PER_SECOND = 1_000_000
@@ -73,63 +99,99 @@ if __name__ == "__main__":
     # This is our target event count per fragment; Use "all" to keep original event count
     EVENTS_PER_FRAGMENT = "all"
     # EVENTS_PER_FRAGMENT = 4096
-    # Min number of events a fragment needs before adding or removing events
     MIN_EVENTS_COUNT = 2048
+    # Min number of events a fragment needs before adding or removing events
     DOWNSAMPLE_METHOD = "random" # "random", "farthest_point"
     NOISE_REDUCTION_METHOD = "sor" # "none", "sor" = statistical outlier removal
 
-    # If the csv contains a EVENTS_CSV_BB_CORNER_COL, 
-    # add bbox events to the resulting fragments or remove those events
-    ADD_BB_EVENTS = False
-    SAVE_PARTIAL_TRAJECTORIES = True
-    MIN_FILE_SIZE_BYTES = 100 * 1024 # 100KB
+    ### Paths
+    # TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories/2_separated_mu")
+    TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified")
+    OUTPUT_DATASET_DIR = Path("../../datasets/insect/") / f"{T_BUCKET_LENGTH_MS}ms_{EVENTS_PER_FRAGMENT}pts{DATETIME_STR_PREFIX}"
+    OPTIONS_JSON_DIR = Path("output/logs/fragmentation") / DATETIME_STR
 
-    print(f"Using MAX_EVENTS_PER_TRAJECTORY={EVENTS_PER_FRAGMENT}, T_BUCKET_LENGTH_MS={T_BUCKET_LENGTH_MS}")
+    # Find all trajectory dirs
+    trajectory_dirs = [d for d in TRAJECTORIES_BASE_DIR.glob("*_trajectories*")]
 
-    scenes = [
-        # "1_l-l-l",
-        # "2_l-h-l",
-        # "3_m-h-h",
-        # "4_m-m-h",
-        # "5_h-l-h",
-        # "6_h-h-h_filtered",
-        "hauptsächlichBienen1",
-        # "hauptsächlichBienen1_trajectories_2024-06-03_19-41-13",
-        # "libellen1_trajectories_2024-06-03_19-41-13",
-        # "vieleSchmetterlinge2_trajectories_2024-06-03_19-41-13",
-        # "wespen1_trajectories_2024-06-03_19-41-13",
-        # "wespen2_trajectories_2024-06-03_19-41-13"
+    # FOR TESTING!
+    # trajectory_dirs = [TRAJECTORIES_CSV_DIR / "6_h-h-h_filtered_trajectories"]
+
+    option_names = [
+        "DATETIME_STR",
+        "ADD_TIME_TO_FILENAME",
+        "ADD_BB_EVENTS",
+        "SAVE_PARTIAL_TRAJECTORIES",
+        "OVERWRITE_EXISTING",
+        "OUTPUT_DIR_MODE",
+        "WIDTH",
+        "HEIGHT",
+        "TRAJECTORIES_CSV_DIR",
+        "OUTPUT_DATASET_DIR",
+        "MIN_FILE_SIZE_BYTES",
+        "TIMESTEPS_PER_SECOND",
+        "T_SCALE",
+        "T_BUCKET_LENGTH",
+        "T_BUCKET_LENGTH_MS",
+        "EVENTS_PER_FRAGMENT",
+        "MIN_EVENTS_COUNT",
+        "DOWNSAMPLE_METHOD",
+        "NOISE_REDUCTION_METHOD",
     ]
+    OPTIONS_JSON_DIR.mkdir(exist_ok=True, parents=True)
+    get_options_json(option_names, vars(), OPTIONS_JSON_DIR / "options.json")
 
-    for scene in scenes:
-        csv_dir = TRAJECTORIES_CSV_DIR / f"{scene}_trajectories"
-        output_base_dir = csv_dir / f"fragments_time_{T_BUCKET_LENGTH_MS}ms_{EVENTS_PER_FRAGMENT}pts{DATETIME_STR_PREFIX}"
 
-        print(f"\nProcessing dir: {csv_dir}")
-        
-        # Find all csv files
-        csv_paths = [csv_dir/file.name for file in csv_dir.iterdir() if (file.is_file() and file.name.endswith(".csv") and file.stat().st_size >= MIN_FILE_SIZE_BYTES)]
-        print(f"Found {len(csv_paths)} files with >= {MIN_FILE_SIZE_BYTES//1024}KB")
+    # Create class dirs
+    if OUTPUT_DIR_MODE == "dataset_dir":
+        OUTPUT_DATASET_DIR.mkdir(exist_ok=True, parents=True)
+        get_options_json(option_names, vars(), OUTPUT_DATASET_DIR / "options.json")
+        for cl in bee.FULL_CLASS_NAMES:
+            (OUTPUT_DATASET_DIR / cl).mkdir(exist_ok=True)
+
+
+    for trajectory_dir in trajectory_dirs:
+        # Extract trajectory dir simple name
+        try:
+            scene_name = bee.dir_to_scene_name(trajectory_dir.name)
+        except RuntimeError:
+            print("Skipping:", trajectory_dir.name, ", Doesnt match file scene dir pattern!")
+            continue
 
         csv_header = None
+        scene_id = bee.scene_name_to_id(scene_name)
+        scene_short_id = bee.scene_id_to_short_id(scene_id)
 
-        # TESTING: only use this file!
-        # csv_paths = [csv_dir/"3_bee_pts38695_start7674867.csv"]
-        
-        for csv_path in csv_paths:
-            print("Fragmenting trajectory file", csv_path, "...")
+        # Find all files from directory
+        trajectory_files = [file for file in trajectory_dir.iterdir() \
+                     if (file.is_file() and file.name.endswith(".csv") and file.stat().st_size >= MIN_FILE_SIZE_BYTES)]
+
+        print(f"\n#### Processing scene {scene_id} containing {len(trajectory_files)} trajectories >= {MIN_FILE_SIZE_BYTES//1024}KB ####")
+
+        # Iterate over files in directory
+        for trajectory_filepath in trajectory_files:
+            filestem = trajectory_filepath.name.replace(".csv", "")
+            name_arr = filestem.split("_")
+            instance_id = name_arr[0]
+            cla = name_arr[1]
+            clas = bee.parse_full_class_name(cla, "unknown")
+            pts = int(name_arr[2][3:])
+            start_ts = int(name_arr[3][5:])
+            fragmentation_key = f"tf{T_BUCKET_LENGTH_MS}ms"
+
+            print(f"Processing: \"{scene_id}/{instance_id}\" ({clas}) ({pts} points)")
+            
             
             fragments = []
             
-            with open(csv_path, 'r') as csv_file:
+            with open(trajectory_filepath, 'r') as csv_file:
                 reader = csv.reader(csv_file)
                 # skip header
                 csv_header = next(reader)
 
-                EVENTS_CSV_P_COL = indexOrDefault(csv_header, "p", None)
-                EVENTS_CSV_IS_CONFIDENT_COL = indexOrDefault(csv_header, "is_confident", None)
-                EVENTS_CSV_FRAME_INDEX_COL = indexOrDefault(csv_header, "bb_frame_index", None)
-                EVENTS_CSV_BB_CORNER_COL = indexOrDefault(csv_header, "bb_corner_index", None)
+                EVENTS_CSV_P_COL = index_or_default(csv_header, "p", None)
+                EVENTS_CSV_IS_CONFIDENT_COL = index_or_default(csv_header, "is_confident", None)
+                EVENTS_CSV_FRAME_INDEX_COL = index_or_default(csv_header, "bb_frame_index", None)
+                EVENTS_CSV_BB_CORNER_COL = index_or_default(csv_header, "bb_corner_index", None)
                 
                 start = 0
                 next_fragment_start = start + T_BUCKET_LENGTH
@@ -238,28 +300,38 @@ if __name__ == "__main__":
             # for i, fragment in enumerate(fragments):
             #     print(f"- Fragment {fragment.index: >3}: evts:{len(fragment.events): >5}, orig_evts:{fragment.original_event_count: >5}, start:{fragment.start/T_SCALE/TIMESTEPS_PER_SECOND: >5.2f}s")
 
-            # Save fragments
-            # Create dir
-            csv_stem = csv_path.name.replace(".csv", "")
-            output_dir = output_base_dir / f"{csv_stem}"
-            output_dir.mkdir(parents=True, exist_ok=True)
-
             # Save fragmented trajectories as CSVs
-            saved_count = 0
-            for i, fragment in enumerate(fragments):
-                output_path = output_dir / f"frag_{fragment.index}.csv"
+            if OUTPUT_DIR_MODE == "parent_dir":
+                # save in parent dir of trajectory
+                saved_count = 0
+                output_base_dir = csv_dir / f"fragments_time_{T_BUCKET_LENGTH_MS}ms_{EVENTS_PER_FRAGMENT}pts{DATETIME_STR_PREFIX}"
+                output_dir = output_base_dir / f"{filestem}"
+                output_dir.mkdir(parents=True, exist_ok=True)
+                for i, fragment in enumerate(fragments):
+                    output_path = output_dir / f"frag_{fragment.index}.csv"
+                    # with open(output_path, 'w', newline='') as file:
+                    #     writer = csv.writer(file)
+                    #     writer.writerow(["x", "y", "t"])
+                    #     for event in fragment.events_df:
+                    #         # limit to n digits after decimal separator
+                    #         writer.writerow( event )
+                    #     saved_count += 1
+                    fragment.events_df.to_csv(output_path, index=False, header=True, decimal='.', sep=',', float_format='%.3f')
+                print(f"Saved {saved_count} trajectory files in {output_base_dir}")
+            
+            elif OUTPUT_DIR_MODE == "dataset_dir":
+                # save all fragments in a common dir
+                saved_count = 0
+                output_dir = OUTPUT_DATASET_DIR / clas
+                # save fragment files
+                for i, fragment in enumerate(fragments):
+                    # identify fragment with scene_name + instance_id + fragment_index
+                    output_path = output_dir / f"{clas}_{scene_short_id}_{instance_id}_{fragment.index}.csv"
+                    fragment.events_df.to_csv(output_path, index=False, header=True, decimal='.', sep=',', float_format='%.3f')
 
-                # with open(output_path, 'w', newline='') as file:
-                #     writer = csv.writer(file)
-                #     writer.writerow(["x", "y", "t"])
-                #     for event in fragment.events_df:
-                #         # limit to n digits after decimal separator
-                #         writer.writerow( event )
-                #     saved_count += 1
-
-                fragment.events_df.to_csv(output_path, index=False, header=True, decimal='.', sep=',', float_format='%.3f')
-
-            print(f"Saved {saved_count} trajectory files in {output_base_dir}")
+            else:
+                print("Invalid OUTPUT_DIR_MODE!")
+                exit()
 
     print("Finished!")
 

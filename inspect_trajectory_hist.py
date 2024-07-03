@@ -140,7 +140,7 @@ if __name__ == "__main__":
 
     # Paths
     # TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories/2_separated_mu")
-    TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories/3_classified_pf")
+    TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified_pf")
     # TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories/3_classified_mu")
     # tf: timeframe
     FIGURE_OUTPUT_DIR = Path("output/figures/projection_and_hist") / f"tf{T_BUCKET_LENGTH_MS}ms_tbr{BINS_PER_T_BUCKET}_{DATETIME_STR}"
@@ -169,7 +169,7 @@ if __name__ == "__main__":
     fragments_stats = []
 
     # zb "1_l-l-l_trajectories_2024-05-29_15-27-12"
-    dir_name_pattern = re.compile(r"^(.*)_trajectories")
+    dir_name_pattern = re.compile(r"^(.*)_trajectories.*")
 
     # Find existing figure dirs to skip them
     if OVERWRITE_EXISTING:
@@ -178,24 +178,26 @@ if __name__ == "__main__":
         existing_figure_dir_names = [d.name for d in FIGURE_OUTPUT_DIR.glob("*_trajectories*")]
 
     # Find all trajectory dirs; Skip existing
-    trajectory_dirs = [d for d in TRAJECTORIES_CSV_DIR.glob("*_trajectories*") if d.name not in existing_figure_dir_names]
+    trajectory_dirs = [d for d in TRAJECTORIES_BASE_DIR.glob("*_trajectories*") if d.name not in existing_figure_dir_names]
 
     # FOR TESTING!
     # trajectory_dirs = [TRAJECTORIES_CSV_DIR / "6_h-h-h_filtered_trajectories"]
 
     for trajectory_dir in trajectory_dirs:
         # Extract trajectory dir simple name
-        matches = re.findall(dir_name_pattern, trajectory_dir.name)
-        if len(matches) == 0:
-            print("Skipping:", trajectory_dir.name, ", Doesnt match file name pattern!")
+        try:
+            scene_name = bee.dir_to_scene_name(trajectory_dir.name)
+            scene_id = bee.scene_name_to_id(scene_name)
+        except RuntimeError:
+            print("Skipping:", trajectory_dir.name, ", Doesnt match file scene dir pattern!")
             continue
-        scene_name = matches[0]
+
         stats.setdefault(scene_name, {"event_count": None, "length_s": None, "trajectories": {}})
 
         # Find all files from directory; Skip existing
         trajectory_files = [file for file in trajectory_dir.iterdir() if file.is_file()]
 
-        print(f"\n#### Processing scene: \"{trajectory_dir.name}\" containing {len(trajectory_files)} trajectories ####")
+        print(f"\n#### Processing scene: \"{trajectory_dir.name}\" ({scene_id}) containing {len(trajectory_files)} trajectories ####")
 
         # Iterate over files in directory
         for trajectory_filepath in trajectory_files:
