@@ -52,6 +52,13 @@ def get_options_json(option_names, vars, json_path=None):
         print("Stored options json to", str(json_path))
     return options
 
+def pc_normalize(pc):
+    centroid = np.mean(pc, axis=0)
+    pc = pc - centroid
+    m = np.max(np.sqrt(np.sum(pc**2, axis=1)))
+    pc = pc / m
+    return pc
+
 
 ############################ MAIN ##################################
 if __name__ == "__main__":
@@ -65,6 +72,7 @@ if __name__ == "__main__":
     SAVE_PARTIAL_TRAJECTORIES = True
     OVERWRITE_EXISTING = True
     OUTPUT_DIR_MODE = "dataset_dir" # "parent_dir", "dataset_dir"
+    SAVE_STATISTICS = True
 
     ### DEBUG
     PRINT_PROGRESS_EVERY_N_PERCENT = 1
@@ -80,7 +88,7 @@ if __name__ == "__main__":
     EVENTS_CSV_BB_CORNER_COL = None
 
     
-    ### Fragmentation and ther params
+    ### Fragmentation and other params
     MIN_FILE_SIZE_BYTES = 100 * 1024 # 100KB
     # Precision of the timestamp in fractions per second.
     # For mikroseconds: 1000000, for milliseconds: 1000
@@ -100,14 +108,26 @@ if __name__ == "__main__":
     EVENTS_PER_FRAGMENT = 4096
     # Min number of events a fragment needs before adding or removing events
     MIN_EVENTS_COUNT = EVENTS_PER_FRAGMENT//2
+
     DOWNSAMPLE_METHOD = "farthest_point" # "random", "farthest_point"
+    DOWNSAMPLE_METHOD_STR = "fps" if "farthest_point" else ("rnd" if "random" else "no")
+
     NOISE_REDUCTION_METHOD = "sor" # "none", "sor" = statistical outlier removal
+
+    # Normalize point clouds of each fragment
+    NORMALIZE = True
+    NORMALIZE_STR = "_norm" if NORMALIZE else ""
+    # Shuffle points of each fragment
+    SHUFFLE_T = True
+    SHUFFLE_T_STR = "_shufflet" if SHUFFLE_T else ""
 
     ### Paths
     # TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories/2_separated_mu")
     TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified")
-    OUTPUT_DATASET_DIR = Path("../../datasets/insect/") / f"{T_BUCKET_LENGTH_MS}ms_{EVENTS_PER_FRAGMENT}pts{DATETIME_STR_PREFIX}"
-    OPTIONS_JSON_DIR = Path("output/logs/fragmentation") / DATETIME_STR
+    OUTPUT_DATASET_DIR = Path("../../datasets/insect/") / \
+        f"{T_BUCKET_LENGTH_MS}ms_{EVENTS_PER_FRAGMENT}pts_{DOWNSAMPLE_METHOD_STR}-ds_{NOISE_REDUCTION_METHOD}-nr"\
+        f"{NORMALIZE_STR}{SHUFFLE_T_STR}{DATETIME_STR_PREFIX}"
+    LOG_DIR = Path("output/logs/fragmentation") / DATETIME_STR
 
     # Save parameters to json file
     OPTION_NAMES = [
@@ -129,8 +149,8 @@ if __name__ == "__main__":
         "DOWNSAMPLE_METHOD",
         "NOISE_REDUCTION_METHOD",
     ]
-    OPTIONS_JSON_DIR.mkdir(exist_ok=True, parents=True)
-    get_options_json(OPTION_NAMES, vars(), OPTIONS_JSON_DIR / "options.json")
+    LOG_DIR.mkdir(exist_ok=True, parents=True)
+    get_options_json(OPTION_NAMES, vars(), LOG_DIR / "options.json")
 
     # Create class dirs
     if OUTPUT_DIR_MODE == "dataset_dir":
@@ -141,6 +161,8 @@ if __name__ == "__main__":
 
     # Find all trajectory dirs
     trajectory_dirs = [d for d in TRAJECTORIES_BASE_DIR.glob("*_trajectories*")]
+
+    fragments_stats = []
 
     for trajectory_dir in trajectory_dirs:
         # Extract trajectory dir simple name
@@ -157,7 +179,7 @@ if __name__ == "__main__":
         trajectory_files = [file for file in trajectory_dir.iterdir() \
                      if (file.is_file() and file.name.endswith(".csv") and file.stat().st_size >= MIN_FILE_SIZE_BYTES)]
 
-        print(f"\n#### Processing scene {scene_id} containing {len(trajectory_files)} trajectories >= {MIN_FILE_SIZE_BYTES//1024}KB ####")
+        print(f"\nSCENE {scene_id} containing {len(trajectory_files)} trajectories >= {MIN_FILE_SIZE_BYTES//1024}KB ####")
 
         # Iterate over files in directory
         for trajectory_filepath in trajectory_files:
@@ -166,12 +188,10 @@ if __name__ == "__main__":
             instance_id = name_arr[0]
             cla = name_arr[1]
             clas = bee.parse_full_class_name(cla, "unknown")
-            pts = int(name_arr[2][3:])
-            start_ts = int(name_arr[3][5:])
-            fragmentation_key = f"tf{T_BUCKET_LENGTH_MS}ms"
+            traj_event_count = int(name_arr[2][3:])
+            traj_start_ts = int(name_arr[3][5:])
 
-            print(f"processing \"{scene_id}/{instance_id}\" ({clas}) ({pts} points)")
-            
+            print(f"| TRAJECTORY {scene_id}:{instance_id} ({clas}) ({traj_event_count}pts)")
             
             fragments = []
             
@@ -268,8 +288,17 @@ if __name__ == "__main__":
                             # Use random sampling to choose subset of events
                             fragment.events_df = fragment.events_df.sample(n=EVENTS_PER_FRAGMENT, replace=False, random_state=0)
                         elif DOWNSAMPLE_METHOD == "farthest_point":
-                            pcd = pcd.farthest_point_down_sample(EVENTS_PER_FRAGMENT)
-                            fragment.events_df = pd.DataFrame(data=np.array(pcd.points), columns=["x","y","t"])
+                            pcd_fps = pcd.farthest_point_down_sample(EVENTS_PER_FRAGMENT)
+                            # BUG: farthest_point_down_sample sometimes returns less than N points!
+                            if len(pcd_fps.points) == EVENTS_PER_FRAGMENT:
+                                fragment.events_df = pd.DataFrame(data=np.array(pcd_fps.points), columns=["x","y","t"])
+                            else:
+                                # Fall back to random sampling
+                                print("| | WARNING: sampled_event_count != EVENTS_PER_FRAGMENT! Using random sampling!")
+                                # FIRST convert point cloud  back to pandas df
+                                fragment.events_df = pd.DataFrame(data=np.array(pcd.points), columns=["x","y","t"])
+                                # Use random sampling to choose subset of events
+                                fragment.events_df = fragment.events_df.sample(n=EVENTS_PER_FRAGMENT, replace=False, random_state=0)
                         else:
                             raise NotImplementedError("DOWNSAMPLE_METHOD " + str(DOWNSAMPLE_METHOD) + " not implemented!")
                         downsampled_count += 1
@@ -290,19 +319,30 @@ if __name__ == "__main__":
 
                 fragment.sampled_event_count = len(fragment.events_df.index)
 
-                if EVENTS_CSV_BB_CORNER_COL is not None and ADD_BB_EVENTS:
-                    # concat normal events and bbox events
-                    fragment.events_df = pd.concat([fragment.events_df, bb_events_df])
-                    # sort by t, then bb_corner_index
-                    fragment.events_df = fragment.events_df.sort_values(["t", "bb_corner_index"])
+                # shuffle events or sort by time
+                if SHUFFLE_T:
+                    fragment.events_df = fragment.events_df.sample(frac=1).reset_index(drop=True)
                 else:
-                    # sort by t
                     fragment.events_df = fragment.events_df.sort_values("t")
 
-                print(f"Fragment {instance_id}/{fragment.index}: orig_evts={fragment.original_event_count} "\
-                      + f"nr_evt_count={fragment.noise_reduced_event_count} sampled_evt_count={fragment.sampled_event_count}")
+                if NORMALIZE:
+                    pc = fragment.events_df.to_numpy()
+                    pc[:,:3] = pc_normalize(fragment.events_df.to_numpy()[:,:3])
+                    fragment.events_df = pd.DataFrame(data=pc, columns=["x","y","t"])
 
-            print(f"Trajectory {instance_id}: orig_fragments={orig_fragment_count} remaining_fragments={len(fragments)} "\
+                # Columns: 
+                # scene, instance_id, fragment_id, class, traj_event_count, traj_start_ts, 
+                # orig_event_count, nr_event_count, sampled_event_count
+                fragments_stats.append( [scene_id, int(instance_id), fragment.index, clas, traj_event_count, traj_start_ts, \
+                                         fragment.original_event_count, fragment.noise_reduced_event_count, fragment.sampled_event_count] )
+
+                print(f"| | Fragment {fragment.index}: orig_evts={fragment.original_event_count} "\
+                      + f"nr_evt_count={fragment.noise_reduced_event_count} sampled_evt_count={fragment.sampled_event_count}")
+                
+                if fragment.sampled_event_count != EVENTS_PER_FRAGMENT:
+                    raise RuntimeError("original_event_count != EVENTS_PER_FRAGMENT")
+                
+            print(f"---> Trajectory {instance_id}: orig_fragments={orig_fragment_count} remaining_fragments={len(fragments)} "\
                   + f"upsampled={upsampled_count} downsampeld={downsampled_count}")
 
             # for i, fragment in enumerate(fragments):
@@ -318,8 +358,7 @@ if __name__ == "__main__":
                 for i, fragment in enumerate(fragments):
                     output_path = output_dir / f"frag_{fragment.index}.csv"
                     fragment.events_df.to_csv(output_path, index=False, header=True, decimal='.', sep=',', float_format='%.3f')
-                print(f"Saved {saved_count} trajectory files in {output_base_dir}")
-            
+                # print(f"Saved {saved_count} trajectory files in {output_base_dir}")
             elif OUTPUT_DIR_MODE == "dataset_dir":
                 # save all fragments in a common dir
                 saved_count = 0
@@ -329,10 +368,16 @@ if __name__ == "__main__":
                     # identify fragment with scene_name + instance_id + fragment_index
                     output_path = output_dir / f"{clas}_{scene_short_id}_{instance_id}_{fragment.index}.csv"
                     fragment.events_df.to_csv(output_path, index=False, header=True, decimal='.', sep=',', float_format='%.3f')
-
             else:
-                print("Invalid OUTPUT_DIR_MODE!")
-                exit()
+                raise RuntimeError("Invalid OUTPUT_DIR_MODE " + str(OUTPUT_DIR_MODE))
+
+    if SAVE_STATISTICS:
+        fragments_df = pd.DataFrame(fragments_stats, \
+                columns=["scene", "instance_id", "fragment_id", "class", "traj_event_count", "traj_start_ts", \
+                            "orig_event_count", "nr_event_count", "sampled_event_count"])
+        fragments_df.to_csv(LOG_DIR/"fragments.csv", index=False, header=True, decimal='.', sep=',', float_format='%.3f')
+        if OUTPUT_DIR_MODE == "dataset_dir":
+            fragments_df.to_csv(LOG_DIR/"fragments.csv", index=False, header=True, decimal='.', sep=',', float_format='%.3f')
 
     print("Finished!")
 

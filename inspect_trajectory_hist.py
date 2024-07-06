@@ -56,7 +56,7 @@ def cv2_imwrite(path, image):
     im_buf_arr.tofile(path)
 
 # image as monochrome image with [0,255] (255=white)
-def draw_t_ticks_into_image(image, pixel_distance):
+def draw_t_ticks_into_image(image, pixel_distance, predicitons=None, classes=None, scene_short_id=None, instance_id=None):
     image = image.copy()
     # shape: (height,width)
     h = image.shape[0]
@@ -72,8 +72,23 @@ def draw_t_ticks_into_image(image, pixel_distance):
         # Add part index and time to ticks
         text = f"p:{part_id:0>3} t:{t_s:0>5.2f}s"
         position = (x+5, 20)  # (x, y) coordinates
-        cv2.putText(image, text, position, FONT, FONT_SCALE, FONT_COLOR, thickness=1)
+        cv2.putText(image, text, position, FONT_NAME, FONT_SCALE, FONT_COLOR, thickness=1)
+        # write predicted class per fragment and confidence
+        if predicitons != None:
+            frag_key = (scene_short_id, int(instance_id), int(part_id))
+            pred = predicitons.get(frag_key, None)
+            if pred != None:
+                target_name = pred["target_name"]
+                target_conf = float(pred[target_name])
+                pred_idx = int(pred["pred_choice"])
+                pred_name = classes[pred_idx]
+                pred_conf = float(pred[pred_name])
+                font_color = FONT_COLOR if target_name==pred_name else 255
+                cv2.putText(image, f"tgt:{target_name[:3].upper()} {target_conf: .2f}", (x+5, 40), FONT_NAME, FONT_SCALE, font_color, thickness=1)
+                cv2.putText(image, f"prd:{pred_name[:3].upper()} {pred_conf: .2f}", (x+5, 60), FONT_NAME, FONT_SCALE, font_color, thickness=1)
+
     return image
+
 
 def y_crop_to_used_area(image, padding=0):
     image_height = image.shape[0]
@@ -132,18 +147,20 @@ if __name__ == "__main__":
     # Whether to crop images of the full flight trajectories to their used y areas
     Y_CROP_FULL_TRAJ_IMAGES = False
     # Draw ticks, vertical lines and text
-    DRAW_T_TICKS = False
+    DRAW_T_TICKS = True
+    DRAW_PREDICTIONS = True
+    DRAW_PREDICTIONS_STR = "_pred" if DRAW_PREDICTIONS else ""
     # For text of ticks
-    FONT = cv2.FONT_HERSHEY_SIMPLEX
+    FONT_NAME = cv2.FONT_HERSHEY_SIMPLEX
     FONT_SCALE = 0.5
     FONT_COLOR = 127  # BGR color (here, green)
 
+
     # Paths
-    # TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories/2_separated_mu")
-    TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified_pf")
-    # TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories/3_classified_mu")
+    TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified")
+    PREDICTION_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-07-03_23-11/logs/pred_per_class_2024-07-05_12-39.csv")
     # tf: timeframe
-    FIGURE_OUTPUT_DIR = Path("output/figures/projection_and_hist") / f"tf{T_BUCKET_LENGTH_MS}ms_tbr{BINS_PER_T_BUCKET}_{DATETIME_STR}"
+    FIGURE_OUTPUT_DIR = Path("output/figures/projection_and_hist") / f"tf{T_BUCKET_LENGTH_MS}ms_tbr{BINS_PER_T_BUCKET}{DRAW_PREDICTIONS_STR}_{DATETIME_STR}"
     STATS_OUTPUT_DIR = Path("output/statistics/hist/") / f"tf{T_BUCKET_LENGTH_MS}ms_{DATETIME_STR}"
 
     # stats = {
@@ -168,6 +185,37 @@ if __name__ == "__main__":
     stats = {}
     fragments_stats = []
 
+    # Read predicitons csv
+    # key: (scene_id, instance_id, fragment_index)
+    # data: pred_choice, pred value per class...
+    # example: ('h3', 20, 4) {'pred_choice': '2', 'bee': '-3.4066', 'butterfly': '-1.6550', ...}
+    predicitons = {}
+    pred_classes = []
+    if DRAW_PREDICTIONS:
+        with open(PREDICTION_FILE, 'r') as input_labels_file:
+            # column: sample_path, target_name, target_id, pred_choice, bee,butterfly,dragonfly,wasp,insect
+            reader = csv.DictReader(input_labels_file)
+            header = next(reader)
+            hk = list(header.keys())
+            first_class_index = hk.index("bee")
+            pred_classes = hk[first_class_index:]
+
+            for row in reader:
+                # make key
+                # example: "dragonfly\dragonfly_h3_6_5.csv".
+                # get "h3_6_5" and split to "h3","6","5".
+                # (scene_id, instance_id, fragment_index).
+                # convert "6" and "5" to int.
+                frag_id = row["sample_path"].replace(".csv","").split("_")[-3:]
+                frag_id[1] = int(frag_id[1])
+                frag_id[2] = int(frag_id[2])
+                frag_id = tuple(frag_id)
+                # add pred_choice and every class prediction to the dict
+                pred = {}
+                for k in ["target_name", "target_id", "pred_choice"] + pred_classes:
+                    pred[k] = row[k]
+                predicitons[frag_id] = pred
+
     # zb "1_l-l-l_trajectories_2024-05-29_15-27-12"
     dir_name_pattern = re.compile(r"^(.*)_trajectories.*")
 
@@ -188,6 +236,7 @@ if __name__ == "__main__":
         try:
             scene_name = bee.dir_to_scene_name(trajectory_dir.name)
             scene_id = bee.scene_name_to_id(scene_name)
+            scene_short_id = bee.scene_id_to_short_id(scene_id)
         except RuntimeError:
             print("Skipping:", trajectory_dir.name, ", Doesnt match file scene dir pattern!")
             continue
@@ -296,8 +345,8 @@ if __name__ == "__main__":
                 ty_heatmap_image = hist2d_to_image(ty_heatmap_ycrop)
 
                 if DRAW_T_TICKS:
-                    tx_heatmap_image = draw_t_ticks_into_image(tx_heatmap_image, BINS_PER_T_BUCKET)
-                    ty_heatmap_image = draw_t_ticks_into_image(ty_heatmap_image, BINS_PER_T_BUCKET)
+                    tx_heatmap_image = draw_t_ticks_into_image(tx_heatmap_image, BINS_PER_T_BUCKET, predicitons, pred_classes, scene_short_id, instance_id)
+                    ty_heatmap_image = draw_t_ticks_into_image(ty_heatmap_image, BINS_PER_T_BUCKET, predicitons, pred_classes, scene_short_id, instance_id)
 
                 fig, axs = plt.subplots(3, gridspec_kw={'height_ratios': [1280,720,500]})
                 fig.set_size_inches(20, 8)
@@ -376,7 +425,7 @@ if __name__ == "__main__":
         with open(STATS_OUTPUT_DIR / "all.json", "w") as outfile:
             json.dump(stats, outfile)
 
-    fragments_df = pd.DataFrame(fragments_stats, \
-            columns=["scene", "instance_id", "fragment_id", "class", "traj_evnt_count", "traj_len_s", "frag_evnt_count", "frag_len_s"])
-    fragments_df.to_csv(STATS_OUTPUT_DIR / "all_fragments.csv", index=False, header=True, decimal='.', sep=',', float_format='%.3f')
-    print(fragments_df)
+        fragments_df = pd.DataFrame(fragments_stats, \
+                columns=["scene", "instance_id", "fragment_id", "class", "traj_evnt_count", "traj_len_s", "frag_evnt_count", "frag_len_s"])
+        fragments_df.to_csv(STATS_OUTPUT_DIR / "all_fragments.csv", index=False, header=True, decimal='.', sep=',', float_format='%.3f')
+        print(fragments_df)
