@@ -13,7 +13,7 @@ CLASS_ABBREVIATIONS = {
     "other":        ("oth","o"),  # other objects that are not insects
 }
 
-FULL_CLASS_NAMES = list(CLASS_ABBREVIATIONS.keys())
+CLASSES = list(CLASS_ABBREVIATIONS.keys())
 
 # scene_id: [full scene name, short scene id]
 SCENE_ID_ALIASES = {
@@ -81,6 +81,6 @@ def dir_to_scene_name(trajectory_dir_name:str):
 
 # DEBUG
 if __name__ == "__main__":
-    print("FULL_CLASS_NAMES", FULL_CLASS_NAMES)
+    print("FULL_CLASS_NAMES", CLASSES)
     print("SCENE_IDS", SCENE_IDS)
     print("SCENE_NAMES", SCENE_NAMES)

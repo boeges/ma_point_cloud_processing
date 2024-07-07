@@ -156,7 +156,7 @@ if __name__ == "__main__":
     if OUTPUT_DIR_MODE == "dataset_dir":
         OUTPUT_DATASET_DIR.mkdir(exist_ok=True, parents=True)
         get_options_json(OPTION_NAMES, vars(), OUTPUT_DATASET_DIR / "options.json")
-        for cl in bee.FULL_CLASS_NAMES:
+        for cl in bee.CLASSES:
             (OUTPUT_DATASET_DIR / cl).mkdir(exist_ok=True)
 
     # Find all trajectory dirs
