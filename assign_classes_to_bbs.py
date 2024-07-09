@@ -9,7 +9,7 @@ from bee_utils import parse_full_class_name
 ############################ MAIN ##################################
 if __name__ == "__main__":
 
-    INPUT_LABELS_HAS_HEADER = True
+    INPUT_LABELS_HAS_HEADER = False
     INPUT_CLASSES_HAS_HEADER = True
 
     # Paths
@@ -53,6 +53,7 @@ if __name__ == "__main__":
             
         print("\nProcessing file:", labels_filepath.name)
 
+        # instance_id: (full_class_name, is_difficult)
         id_class_map = {}
         with open(classes_filepath, 'r') as classes_file:
             classes_reader = csv.reader(classes_file)
@@ -62,8 +63,13 @@ if __name__ == "__main__":
             for row in classes_reader:
                 id = int(row[0])
                 cla = row[1].lower()
+                # 0 at the end means it is difficult to classify / not confident
+                is_difficult = cla.endswith("0")
+                if is_difficult:
+                    # remove "0" at the end
+                    cla = cla[:-1]
                 real_class = parse_full_class_name(cla, "insect")
-                id_class_map[id] = real_class
+                id_class_map[id] = (real_class, is_difficult)
 
         with open(labels_filepath, 'r') as labels_file,\
                 open(output_labels_filepath, 'w', newline='') as output_labels_file:
@@ -80,11 +86,14 @@ if __name__ == "__main__":
                 orig_class = parse_full_class_name(row[1], "insect")
                 new_row = [*row]
                 # Get new class or "insect" if there is no class available for this id
-                new_class = id_class_map.get(id, "insect")
+                new_class, is_difficult = id_class_map.get(id, ("insect",0))
                 if new_class == "insect" and orig_class != "insect" and orig_class != "":
                     # if new class is "insect" and orig class something else, use orig class
                     new_class = orig_class
+                # update "class" column
                 new_row[1] = new_class
+                # update "is_difficult" column
+                new_row[3] = "1" if is_difficult else "0"
                 labels_writer.writerow(new_row)
 
         print(f"Saved '{output_labels_filepath}'.")
