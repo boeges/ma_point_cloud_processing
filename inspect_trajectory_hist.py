@@ -206,10 +206,7 @@ if __name__ == "__main__":
                 # get "h3_6_5" and split to "h3","6","5".
                 # (scene_id, instance_id, fragment_index).
                 # convert "6" and "5" to int.
-                frag_id = row["sample_path"].replace(".csv","").split("_")[-3:]
-                frag_id[1] = int(frag_id[1])
-                frag_id[2] = int(frag_id[2])
-                frag_id = tuple(frag_id)
+                frag_id = bee.frag_filename_to_id(row["sample_path"])
                 # add pred_choice and every class prediction to the dict
                 pred = {}
                 for k in ["target_name", "target_id", "pred_choice"] + pred_classes:

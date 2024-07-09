@@ -1,6 +1,8 @@
 # Purpose: Defines common util functions and classes for several scripts.
 
 import re
+import pandas as pd
+from matplotlib import colors
 from datetime import datetime
 
 # First in tuple MUST be 3-character abbreviation!
@@ -43,6 +45,20 @@ SCENE_NAMES = [s[0] for s in SCENE_ID_ALIASES.values()]
 # zb "1_l-l-l_trajectories_2024-05-29_15-27-12"
 DIR_NAME_PATTERN = re.compile(r"^(.+)_trajectories.*")
 
+CLASS_COLORS = [
+    (1.0, 0.4980392156862745, 0.0, 1.0), # bee, oragne
+    (0.30196078431372547, 0.6862745098039216, 0.2901960784313726, 1.0), # butterfly, green
+    (0.21568627450980393, 0.49411764705882355, 0.7215686274509804, 1.0), # dragonfly, blue
+    (0.8941176470588236, 0.10196078431372549, 0.10980392156862745, 1.0), # wasp, red
+    (0.596078431372549, 0.3058823529411765, 0.6392156862745098, 1.0), # insect, purple
+    (1.0, 1.0, 0.2, 1.0), # other, yellow
+    (0.6509803921568628, 0.33725490196078434, 0.1568627450980392, 1.0),
+    (0.9686274509803922, 0.5058823529411764, 0.7490196078431373, 1.0)
+]
+
+CLASS_CMAP = colors.ListedColormap(CLASS_COLORS)
+
+
 def get_date_time_str():
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -72,9 +88,28 @@ def dir_to_scene_name(trajectory_dir_name:str):
     scene_name = matches[0]
     return scene_name
 
+# make key (scene_id, instance_id, frag_index).
+# example: "dragonfly\dragonfly_h3_6_5.csv".
+# get "h3_6_5" and split to "h3","6","5".
+# (scene_id, instance_id, fragment_index).
+# then convert "6" and "5" to int.
+def frag_filename_to_id(filename) -> tuple:
+    frag_id = filename.replace(".csv","").split("_")[-3:]
+    frag_id[1] = int(frag_id[1])
+    frag_id[2] = int(frag_id[2])
+    frag_id = tuple(frag_id)
+    return frag_id
 
+def id_tuple_to_str(id:tuple) -> str:
+    return f"{id[0]}_{id[1]}_{id[2]}"
 
-
+def get_rgba_of_class_index(class_index):
+    if isinstance(class_index, pd.Series):
+        # convert whole series (pd.Series)
+        return class_index.apply(get_rgba_of_class_index)
+    # cnvert single int
+    return CLASS_COLORS[int(class_index)]
+    
 
 
 
