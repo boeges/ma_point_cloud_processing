@@ -22,8 +22,12 @@ import bee_utils as bee
 T_SCALE = 0.002
 T_BUCKET_LENGTH = 1000 * 100 # 100ms
 
-ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-07-03_23-11/logs/activations_per_class_2024-07-07_21-31.csv")
-DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_2024-07-03_23-04-52")
+# ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-07-03_23-11/logs/activations_per_class_2024-07-07_21-31.csv")
+ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-07-03_23-11/logs/activations_per_class_2024-07-09_23-46.csv")
+# DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_2024-07-03_23-04-52")
+DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_2024-07-09_22-50-18")
+# Contains exported 2d projections
+FIGURES_DIR = Path("output/figures/projection_and_hist/tf100ms_tbr250_pred_2024-07-06")
 
 
 def get_projected_heatmap(df, col1, col2, bins_x, bins_y):
@@ -73,9 +77,10 @@ class LassoManager:
 class TsneInspector:
     """ Inspect samples and assign labels interactively in a t-sne plot. """
 
-    def __init__(self, activations_file, dataset_dir) -> None:
+    def __init__(self, activations_file, dataset_dir, figures_dir) -> None:
         self.activations_file = activations_file
         self.dataset_dir = dataset_dir
+        self.figures_dir = figures_dir
         self.fig = None
         # selected with lasso or by click
         self.selected_ind = np.array([], dtype=int)
@@ -177,7 +182,7 @@ class TsneInspector:
 
         # This label sets the width for the right frame!
         self.selected_id_var = tk.StringVar(value="Selected: no sample selected")
-        self.label_id = tk.Label(frame_right, textvariable=self.selected_id_var, width=30, anchor="w", font=("Arial", 11) )
+        self.label_id = tk.Label(frame_right, textvariable=self.selected_id_var, width=30, pady=10, anchor="w", font=("Arial", 11) )
         self.label_id.pack(side=tk.TOP, fill=tk.X)
 
         self.class_var = tk.IntVar(master=root, value=-1)
@@ -188,8 +193,11 @@ class TsneInspector:
             rb.pack(side=tk.TOP, fill=tk.X)
             self.rb_classes.append(rb)
 
-        button_unselect = tk.Button(master=frame_right, text="Unselect", command=self.unselect_all)
-        button_unselect.pack(side=tk.TOP) #, fill=tk.X
+        button_unselect = tk.Button(master=frame_right, text="Unselect all", width=20, command=self.unselect_all)
+        button_unselect.pack(side=tk.TOP, pady=5)
+
+        button_show_full_traj = tk.Button(master=frame_right, text="Show full trajectory", width=20, command=self.show_full_trajectory)
+        button_show_full_traj.pack(side=tk.TOP, pady=5)
 
 
     def show(self):
@@ -375,10 +383,45 @@ class TsneInspector:
 
         self.fig.canvas.draw_idle()
 
+    def show_full_trajectory(self):
+        if len(self.selected_ind)==0:
+            print("ERROR: No sample selected!")
+        elif len(self.selected_ind)==1:
+            ind = self.selected_ind[0]
+            scene_id, instance_id, frag_index = self.descr_df.at[ind, "frag_id"]
+            scene_name = bee.scene_aliases_by_short_id(scene_id)[0]
+            scene_dir = self.figures_dir / (scene_name+"_trajectories")
+
+            if not scene_dir.exists():
+                print("ERROR: Directory " + str(scene_dir) + " does not exist!")
+                return
+
+            # print("Searching path", (scene_dir/"txproj"))
+            found_paths = list((scene_dir/"txproj").glob(f"{instance_id}_*_txproj.png"))
+            if len(found_paths)==0:
+                print("ERROR: No 2D projection found at", (scene_dir/"txproj"))
+            elif len(found_paths)>1:
+                print("ERROR: Too many 2D projections found at", (scene_dir/"txproj"))
+            else: # ==1
+                # load image
+                img_path = found_paths[0]
+                img = plt.imread(img_path)
+                # show
+                fig1, ax1 = plt.subplots(figsize=(12, 8))
+                ax1.imshow(img, origin='upper', cmap="gray") # aspect="auto"
+                ax1.tick_params(left = False, right = False , labelleft = False, labelbottom = False, bottom = False) 
+                fig1.tight_layout()
+                fig1.show()
+
+        else:
+            print("ERROR: Too many samples selected! Select only one!")
+
+
+
 
 
 if __name__ == '__main__':
-    tsni = TsneInspector(ACTIVATIONS_FILE, DATASET_DIR)
+    tsni = TsneInspector(ACTIVATIONS_FILE, DATASET_DIR, FIGURES_DIR)
     tsni.show()
     
 

@@ -63,7 +63,7 @@ if __name__ == "__main__":
     # 1: Create one subframe between two real frames (doubles frame count)
     SUBFRAME_COUNT = 1
 
-    CREATE_BBOX_EVENTS = True
+    CREATE_BBOX_EVENTS = False
     ADD_DATETIME_TO_OUTPUT_DIR = True
     DATETIME_PREFIX = f"_{DATETIME_STR}" if ADD_DATETIME_TO_OUTPUT_DIR else ""
 
@@ -183,13 +183,13 @@ if __name__ == "__main__":
     # Scenes
     filestems = [
         # PF
-        "hauptsächlichBienen1",
+        # "hauptsächlichBienen1",
         # "hauptsächlichBienen2",
         # "libellen1",
         # "libellen2",
         # "libellen3",
         # "vieleSchmetterlinge1",
-        # "vieleSchmetterlinge2",
+        "vieleSchmetterlinge2",
         # "wespen1",
         # "wespen2",
         # "wespen3",

@@ -137,13 +137,15 @@ if __name__ == "__main__":
     # BINS_PER_T_BUCKET = 250
     BINS_PER_T_BUCKET = int(T_BUCKET_LENGTH_MS * 2.5) # 250 for 100ms, 10000 for 4000ms
     
-    SAVE_STATISTICS = False
+    # Save trajectory statistics
+    SAVE_STATISTICS = True
+    # Save images of complete paths
     SAVE_IMAGES = True
+    # Save images of each individual bucket (WARNING: Creates many images)
+    SAVE_BUCKET_IMAGES = False
     # BINS_PER_T_BUCKET = T_BUCKET_LENGTH_MS # a bucket for every ms
     # For saving matplotlib images
     SAVE_IMAGE_DPI = 300
-    # Save images of each individual bucket (WARNING: Creates many images)
-    SAVE_BUCKET_IMAGES = False
     # Whether to crop images of the full flight trajectories to their used y areas
     Y_CROP_FULL_TRAJ_IMAGES = False
     # Draw ticks, vertical lines and text
@@ -158,7 +160,7 @@ if __name__ == "__main__":
 
     # Paths
     TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified")
-    PREDICTION_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-07-03_23-11/logs/pred_per_class_2024-07-05_12-39.csv")
+    PREDICTION_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-07-03_23-11/logs/pred_per_sample_2024-07-05_12-39.csv")
     # tf: timeframe
     FIGURE_OUTPUT_DIR = Path("output/figures/projection_and_hist") / f"tf{T_BUCKET_LENGTH_MS}ms_tbr{BINS_PER_T_BUCKET}{DRAW_PREDICTIONS_STR}_{DATETIME_STR}"
     STATS_OUTPUT_DIR = Path("output/statistics/hist/") / f"tf{T_BUCKET_LENGTH_MS}ms_{DATETIME_STR}"
@@ -225,15 +227,15 @@ if __name__ == "__main__":
     # Find all trajectory dirs; Skip existing
     trajectory_dirs = [d for d in TRAJECTORIES_BASE_DIR.glob("*_trajectories*") if d.name not in existing_figure_dir_names]
 
-    # FOR TESTING!
-    # trajectory_dirs = [TRAJECTORIES_CSV_DIR / "6_h-h-h_filtered_trajectories"]
+    # FOR TESTING! Only use this trajectory
+    # trajectory_dirs = [TRAJECTORIES_BASE_DIR / "wespen3_trajectories"]
 
     for trajectory_dir in trajectory_dirs:
         # Extract trajectory dir simple name
         try:
             scene_name = bee.dir_to_scene_name(trajectory_dir.name)
             scene_id = bee.scene_name_to_id(scene_name)
-            scene_short_id = bee.scene_id_to_short_id(scene_id)
+            scene_short_id = bee.scene_short_id_by_id(scene_id)
         except RuntimeError:
             print("Skipping:", trajectory_dir.name, ", Doesnt match file scene dir pattern!")
             continue

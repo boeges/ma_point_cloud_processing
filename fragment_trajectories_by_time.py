@@ -70,7 +70,6 @@ if __name__ == "__main__":
     # add bbox events to the resulting fragments or remove those events
     ADD_BB_EVENTS = False
     SAVE_PARTIAL_TRAJECTORIES = True
-    OVERWRITE_EXISTING = True
     OUTPUT_DIR_MODE = "dataset_dir" # "parent_dir", "dataset_dir"
     SAVE_STATISTICS = True
 
@@ -135,7 +134,6 @@ if __name__ == "__main__":
         "ADD_TIME_TO_FILENAME",
         "ADD_BB_EVENTS",
         "SAVE_PARTIAL_TRAJECTORIES",
-        "OVERWRITE_EXISTING",
         "OUTPUT_DIR_MODE",
         "TRAJECTORIES_BASE_DIR",
         "OUTPUT_DATASET_DIR",
@@ -173,7 +171,7 @@ if __name__ == "__main__":
             continue
 
         scene_id = bee.scene_name_to_id(scene_name)
-        scene_short_id = bee.scene_id_to_short_id(scene_id)
+        scene_short_id = bee.scene_short_id_by_id(scene_id)
 
         # Find all files from directory
         trajectory_files = [file for file in trajectory_dir.iterdir() \
@@ -191,8 +189,8 @@ if __name__ == "__main__":
             traj_event_count = int(name_arr[2][3:])
             traj_start_ts = int(name_arr[3][5:])
 
-            print(f"| TRAJECTORY {scene_id}:{instance_id} ({clas}) ({traj_event_count}pts)")
-            
+            print(f"├─ TRAJECTORY {scene_id}:{instance_id} ({clas}) ({traj_event_count}pts)")
+
             fragments = []
             
             with open(trajectory_filepath, 'r') as csv_file:
@@ -294,7 +292,7 @@ if __name__ == "__main__":
                                 fragment.events_df = pd.DataFrame(data=np.array(pcd_fps.points), columns=["x","y","t"])
                             else:
                                 # Fall back to random sampling
-                                print("| | WARNING: sampled_event_count != EVENTS_PER_FRAGMENT! Using random sampling!")
+                                print("│ │ └─ WARNING: sampled_event_count != EVENTS_PER_FRAGMENT! Using random sampling!")
                                 # FIRST convert point cloud  back to pandas df
                                 fragment.events_df = pd.DataFrame(data=np.array(pcd.points), columns=["x","y","t"])
                                 # Use random sampling to choose subset of events
@@ -336,13 +334,13 @@ if __name__ == "__main__":
                 fragments_stats.append( [scene_id, int(instance_id), fragment.index, clas, traj_event_count, traj_start_ts, \
                                          fragment.original_event_count, fragment.noise_reduced_event_count, fragment.sampled_event_count] )
 
-                print(f"| | Fragment {fragment.index}: orig_evts={fragment.original_event_count} "\
+                print(f"│ ├─ Fragment {fragment.index}: orig_evts={fragment.original_event_count} "\
                       + f"nr_evt_count={fragment.noise_reduced_event_count} sampled_evt_count={fragment.sampled_event_count}")
                 
                 if fragment.sampled_event_count != EVENTS_PER_FRAGMENT:
                     raise RuntimeError("original_event_count != EVENTS_PER_FRAGMENT")
                 
-            print(f"---> Trajectory {instance_id}: orig_fragments={orig_fragment_count} remaining_fragments={len(fragments)} "\
+            print(f"│ └─ Trajectory {instance_id}: orig_fragments={orig_fragment_count} remaining_fragments={len(fragments)} "\
                   + f"upsampled={upsampled_count} downsampeld={downsampled_count}")
 
             # for i, fragment in enumerate(fragments):

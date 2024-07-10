@@ -18,6 +18,7 @@ CLASS_ABBREVIATIONS = {
 CLASSES = list(CLASS_ABBREVIATIONS.keys())
 
 # scene_id: [full scene name, short scene id]
+""" scene_id: [full scene name, short scene id] """
 SCENE_ID_ALIASES = {
     # HSNR
     "hn-bee-1":         ["hauptsächlichBienen1", "h1"],
@@ -38,6 +39,10 @@ SCENE_ID_ALIASES = {
     "mu-5":             ["5_h-l-h", "m5"],
     "mu-6":             ["6_h-h-h_filtered", "m6"],
 }
+""" short_id: [scene_name, id] """
+SCENE_SHORT_ID_ALIASES = {v[1]: [v[0], k] for k, v in SCENE_ID_ALIASES.items()}
+""" scene_name: [short_id, id] """
+SCENE_NAME_ALIASES = {v[0]: [v[1], k] for k, v in SCENE_ID_ALIASES.items()}
 
 SCENE_IDS = list(SCENE_ID_ALIASES.keys())
 SCENE_NAMES = [s[0] for s in SCENE_ID_ALIASES.values()]
@@ -62,9 +67,9 @@ CLASS_CMAP = colors.ListedColormap(CLASS_COLORS)
 def get_date_time_str():
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-# return short name (first 3 characters)
 def full_class_to_short_class(cla:str, default=None):
-    return CLASS_ABBREVIATIONS.get(cla.lower(), default)
+    """ return short name (first 3 characters) """
+    return CLASS_ABBREVIATIONS.get(cla.lower(), default[:3])[0]
 
 def parse_full_class_name(cla:str, default=None):
     for c,abbr in CLASS_ABBREVIATIONS.items():
@@ -78,8 +83,16 @@ def scene_name_to_id(scene_name:str):
             return id
     raise RuntimeError(f"Scene name {scene_name} not in SCENE_ID_ALIASES!")
 
-def scene_id_to_short_id(scene_id:str):
-    return SCENE_ID_ALIASES[scene_id][1]
+def scene_short_id_by_id(scene_id:str):
+    return scene_aliases_by_id(scene_id)[1]
+
+def scene_aliases_by_id(scene_id:str):
+    """ returns: [scene_name, scene_short_id] """
+    return SCENE_ID_ALIASES[scene_id]
+
+def scene_aliases_by_short_id(scene_short_id:str):
+    """ returns: [scene_name, scene_id ]"""
+    return SCENE_SHORT_ID_ALIASES[scene_short_id]
     
 def dir_to_scene_name(trajectory_dir_name:str):
     matches = re.findall(DIR_NAME_PATTERN, trajectory_dir_name)
@@ -119,3 +132,6 @@ if __name__ == "__main__":
     print("FULL_CLASS_NAMES", CLASSES)
     print("SCENE_IDS", SCENE_IDS)
     print("SCENE_NAMES", SCENE_NAMES)
+    print(parse_full_class_name("i", "aaaaa"))
+
+    print({v[1]: [k, v[0]] for k, v in SCENE_ID_ALIASES.items()})
