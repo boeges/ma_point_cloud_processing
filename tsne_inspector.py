@@ -194,10 +194,18 @@ class TsneInspector:
             self.rb_classes.append(rb)
 
         button_unselect = tk.Button(master=frame_right, text="Unselect all", width=20, command=self.unselect_all)
-        button_unselect.pack(side=tk.TOP, pady=5)
+        button_unselect.pack(side=tk.TOP, padx=10, pady=5, fill=tk.X)
 
         button_show_full_traj = tk.Button(master=frame_right, text="Show full trajectory", width=20, command=self.show_full_trajectory)
-        button_show_full_traj.pack(side=tk.TOP, pady=5)
+        button_show_full_traj.pack(side=tk.TOP, padx=10, pady=5, fill=tk.X)
+
+        button_save_labels_video_ann = tk.Button(master=frame_right, text="Save: Update annotaions file ", width=20, \
+                                                 command=self.save_labels_overwrite_video_annotations)
+        button_save_labels_video_ann.pack(side=tk.TOP, padx=10, pady=5, fill=tk.X)
+
+        button_save_as_new_csv = tk.Button(master=frame_right, text="Save: As separate csv ", width=20, \
+                                                 command=self.save_labels_as_new_csv)
+        button_save_as_new_csv.pack(side=tk.TOP, padx=10, pady=5, fill=tk.X)
 
 
     def show(self):
@@ -403,13 +411,20 @@ class TsneInspector:
             elif len(found_paths)>1:
                 print("ERROR: Too many 2D projections found at", (scene_dir/"txproj"))
             else: # ==1
-                # load image
-                img_path = found_paths[0]
-                img = plt.imread(img_path)
+                # load tx and ty projections
+                tx_proj_path = found_paths[0]
+                ty_proj_path = scene_dir / "typroj" / tx_proj_path.name.replace("_txproj", "_typroj")
+                print(tx_proj_path)
+                print(ty_proj_path)
+                tx_proj = plt.imread(tx_proj_path)
+                ty_proj = plt.imread(ty_proj_path)
                 # show
-                fig1, ax1 = plt.subplots(figsize=(12, 8))
-                ax1.imshow(img, origin='upper', cmap="gray") # aspect="auto"
+                fig1, (ax1, ax2) = plt.subplots(2, figsize=(12, 8))
+                ax1.imshow(tx_proj, origin='upper', cmap="gray") # , aspect="auto" -> verzerrt das Bild; Auch bei zoom!
+                ax2.imshow(ty_proj, origin='upper', cmap="gray")
                 ax1.tick_params(left = False, right = False , labelleft = False, labelbottom = False, bottom = False) 
+                ax2.tick_params(left = False, right = False , labelleft = False, labelbottom = False, bottom = False) 
+                fig1.canvas.manager.set_window_title('t-y- and t-y-projection')
                 fig1.tight_layout()
                 fig1.show()
 
@@ -417,7 +432,16 @@ class TsneInspector:
             print("ERROR: Too many samples selected! Select only one!")
 
 
+    def save_labels_overwrite_video_annotations(self):
+        # TODO update annotations file in output/video_annotations/3_classified/
+        # Do backup of file first.
+        # On start of program print warning if assigned classes from video_annotations file and dataset-classes dont match.
+        pass
 
+
+    def save_labels_as_new_csv(self):
+        # TODO create new csv file with id-class mappings like in output/instance_classes.
+        pass
 
 
 if __name__ == '__main__':
