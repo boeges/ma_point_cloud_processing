@@ -28,6 +28,10 @@ ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-0
 DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_2024-07-09_22-50-18")
 # Contains exported 2d projections
 FIGURES_DIR = Path("output/figures/projection_and_hist/tf100ms_tbr250_pred_2024-07-06")
+# Labels mapping file will be exported to this dir
+LABELS_OUTPUT_DIR = Path("output/instance_classes/tsne_inspector")
+# Dir with bbox annotations; Existing files will be overwritten!
+ANNOTATIONS_DIR = Path("output/video_annotations/3_classified")
 
 
 def get_projected_heatmap(df, col1, col2, bins_x, bins_y):
@@ -77,10 +81,12 @@ class LassoManager:
 class TsneInspector:
     """ Inspect samples and assign labels interactively in a t-sne plot. """
 
-    def __init__(self, activations_file, dataset_dir, figures_dir) -> None:
+    def __init__(self, activations_file, dataset_dir, figures_dir, labels_output_dir, annotations_dir) -> None:
         self.activations_file = activations_file
         self.dataset_dir = dataset_dir
         self.figures_dir = figures_dir
+        self.labels_output_dir = labels_output_dir
+        self.annotations_dir = annotations_dir
         self.fig = None
         # selected with lasso or by click
         self.selected_ind = np.array([], dtype=int)
@@ -98,8 +104,12 @@ class TsneInspector:
         # Split df up in description df and activations df
         # description df
         self.descr_df = df[["sample_path", "target_name"]].copy()
+        self.descr_df["orig_target_name"] = self.descr_df["target_name"].copy()
         # add "frag_id" column
         self.descr_df.loc[:,"frag_id"] = self.descr_df.loc[:,'sample_path'].apply(bee.frag_filename_to_id)
+        # split up frag_id-tuple into 3 columns
+        self.descr_df[['scene_id', 'instance_id', "fragment_index"]] = pd.DataFrame(self.descr_df['frag_id'].tolist(), index=self.descr_df.index)
+        self.descr_df["scene_id"] = self.descr_df["scene_id"].apply(lambda s: bee.scene_aliases_by_short_id(s)[1])
         # add "target_index" column
         classes_map = dict(zip(bee.CLASSES, range(len(bee.CLASSES))))
         self.descr_df.loc[:,'target_index'] = self.descr_df.loc[:,'target_name'].map(classes_map)
@@ -433,19 +443,45 @@ class TsneInspector:
 
 
     def save_labels_overwrite_video_annotations(self):
-        # TODO update annotations file in output/video_annotations/3_classified/
+        """ Update annotations file in output/video_annotations/3_classified/ """
+        # TODO 
         # Do backup of file first.
         # On start of program print warning if assigned classes from video_annotations file and dataset-classes dont match.
-        pass
+
+        scene_ids = self.descr_df["scene_id"].unique()
+        print(scene_ids)
+        for scene_id in scene_ids:
+            print(bee.scene_aliases_by_id(scene_id)[0])
+            # load csv
+            scene_name = bee.scene_aliases_by_id(scene_id)[0]
+            ann_file = self.annotations_dir / (scene_name+".csv")
+            if not ann_file.exists():
+                print("ERROR: Cannot update annotations file; File does not exist;", ann_file)
+                continue
+            columns = ["frame_index", "class", "instance_id", "is_difficult", "x","y","w","h"]
+            df = pd.read_csv(ann_file, sep=",", header=0, names=columns)
+            print(df)
+            break
+
 
 
     def save_labels_as_new_csv(self):
-        # TODO create new csv file with id-class mappings like in output/instance_classes.
-        pass
+        """ Create new csv file with id-class mappings. Save at output/instance_classes/instance_classes/. """
+        datetime_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        output_file = LABELS_OUTPUT_DIR / f"{datetime_str}.csv"
+        output_file.parent.mkdir(exist_ok=True, parents=True)
+
+        # TODO doesnt really make sense; This labels fragments; But it should label full trajectories (series of fragments)
+        # output columns: scene_id, instance_id, fragment_index, class
+        output_df = pd.DataFrame()
+        output_df[["scene_id", "instance_id", "fragment_index"]] = self.descr_df[["scene_id", "instance_id", "fragment_index"]]
+        output_df["class"] = self.descr_df["target_name"]
+        output_df.to_csv(output_file, sep=",", header=True, index=False)
+        print("Saved as", output_file)
 
 
 if __name__ == '__main__':
-    tsni = TsneInspector(ACTIVATIONS_FILE, DATASET_DIR, FIGURES_DIR)
+    tsni = TsneInspector(ACTIVATIONS_FILE, DATASET_DIR, FIGURES_DIR, LABELS_OUTPUT_DIR, ANNOTATIONS_DIR)
     tsni.show()
     
 
