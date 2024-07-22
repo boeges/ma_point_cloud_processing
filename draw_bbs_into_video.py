@@ -30,8 +30,8 @@ if __name__ == "__main__":
     DRAW_VIEWBOX = False
 
     # Paths
-    # SEGMENTATION_STAGE = "2_separated"
-    SEGMENTATION_STAGE = "3_classified"
+    SEGMENTATION_STAGE = "2_separated"
+    # SEGMENTATION_STAGE = "3_classified"
 
     LABELS_CSV_DIR = Path("output/video_annotations/"+SEGMENTATION_STAGE)
     LABELS_CSV_FILENAME = "{filestem}.csv"
@@ -57,18 +57,18 @@ if __name__ == "__main__":
 
     # Offset and scale of label coordinates (should usually be offset=0 and scale=1).
     # For drawing BBs on the RGB video
-    # OFFSET_X = -50
-    # OFFSET_Y = 100
-    # SCALE_X = 1.35
-    # SCALE_Y = 1.35
-    # BB_PADDING = 20 # px in each direction
+    OFFSET_X = -50
+    OFFSET_Y = 100
+    SCALE_X = 1.35
+    SCALE_Y = 1.35
+    BB_PADDING = 20 # px in each direction
 
     ############### PF #############
-    FPS = 60
+    # FPS = 60
 
-    # Paths
-    INPUT_VIDEO_DIR = Path("output/csv_to_video")
-    INPUT_VIDEO_FILENAME = "{filestem}_60fps_dvs{video_prefix}.mp4"
+    # # Paths
+    # INPUT_VIDEO_DIR = Path("output/csv_to_video")
+    # INPUT_VIDEO_FILENAME = "{filestem}_60fps_dvs{video_prefix}.mp4"
     ##################################
 
     ############### MU #############
@@ -78,6 +78,17 @@ if __name__ == "__main__":
     # INPUT_VIDEO_DIR = Path("../../datasets/muenster_dataset/wacv2024_ictrap_dataset")
     # INPUT_VIDEO_FILENAME = "{filestem}_dvs.mp4"
     # # INPUT_VIDEO_FILENAME = "{filestem}_rgb.mp4"
+    ##################################
+
+    ############### MB #############
+    FPS = 60
+
+    # # Paths
+    INPUT_VIDEO_DIR = Path("../../aufnahmen")
+    INPUT_VIDEO_FILENAME = "{filestem}_rgb.mp4"
+    # # INPUT_VIDEO_FILENAME = "{filestem}_rgb.mp4"
+
+    OUTPUT_VIDEO_FILENAME = "{filestem}_rgb.mp4"
     ##################################
 
     OUTPUT_VIDEO_DIR.mkdir(parents=True, exist_ok=True)

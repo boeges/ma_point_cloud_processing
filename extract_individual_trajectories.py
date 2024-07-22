@@ -70,44 +70,44 @@ if __name__ == "__main__":
     FRAMETIMES_CSV_DIR = None # Overwrite this with a path if used!
 
    ############### PF #############
-    FPS = 60
+    # FPS = 60
 
-    # Format from DarkLabel software: (frame_index, classname, instance_id, is_difficult, x, y, w, h) 
-    #                                      0            1          2            3         4  5  6  7
-    LABELS_CSV_HAS_HEADER = False
-    LABELS_CSV_FRAME_COL = 0 # frame index
-    LABELS_CSV_CLASS_COL = 1 # class name
-    LABELS_CSV_ID_COL = 2 # instance id
-    LABELS_CSV_IS_CONFIDENT_COL = 3
-    LABELS_CSV_X_COL = 4
-    LABELS_CSV_Y_COL = 5
-    LABELS_CSV_W_COL = 6
-    LABELS_CSV_H_COL = 7
-    BB_IS_CONFIDENT_WHEN_MATCHES = "0" # is_difficult: 0(=confident)/1(=difficult)
+    # # Format from DarkLabel software: (frame_index, classname, instance_id, is_difficult, x, y, w, h) 
+    # #                                      0            1          2            3         4  5  6  7
+    # LABELS_CSV_HAS_HEADER = False
+    # LABELS_CSV_FRAME_COL = 0 # frame index
+    # LABELS_CSV_CLASS_COL = 1 # class name
+    # LABELS_CSV_ID_COL = 2 # instance id
+    # LABELS_CSV_IS_CONFIDENT_COL = 3
+    # LABELS_CSV_X_COL = 4
+    # LABELS_CSV_Y_COL = 5
+    # LABELS_CSV_W_COL = 6
+    # LABELS_CSV_H_COL = 7
+    # BB_IS_CONFIDENT_WHEN_MATCHES = "0" # is_difficult: 0(=confident)/1(=difficult)
 
-    # Format for events: (x, y, t (us or ms), p)
-    EVENTS_CSV_HAS_HEADER = False
-    EVENTS_CSV_X_COL = 0
-    EVENTS_CSV_Y_COL = 1
-    EVENTS_CSV_T_COL = 2
-    EVENTS_CSV_P_COL = 3
+    # # Format for events: (x, y, t (us or ms), p)
+    # EVENTS_CSV_HAS_HEADER = False
+    # EVENTS_CSV_X_COL = 0
+    # EVENTS_CSV_Y_COL = 1
+    # EVENTS_CSV_T_COL = 2
+    # EVENTS_CSV_P_COL = 3
     
-    FRAMETIMES_FILE_HAS_HEADER = True
+    # FRAMETIMES_FILE_HAS_HEADER = True
 
-    # 2_separated, 3_classified
-    SEGMENTATION_STAGE = "3_classified"
+    # # 2_separated, 3_classified
+    # SEGMENTATION_STAGE = "3_classified"
 
-    # Paths
-    EVENTS_CSV_DIR = Path("../../datasets/Insektenklassifikation")
-    EVENTS_CSV_FILENAME = "{filestem}.csv"
+    # # Paths
+    # EVENTS_CSV_DIR = Path("../../datasets/Insektenklassifikation")
+    # EVENTS_CSV_FILENAME = "{filestem}.csv"
 
-    LABELS_CSV_DIR = Path("output/video_annotations") / SEGMENTATION_STAGE
-    LABELS_CSV_FILENAME = "{filestem}.csv"
+    # LABELS_CSV_DIR = Path("output/video_annotations") / SEGMENTATION_STAGE
+    # LABELS_CSV_FILENAME = "{filestem}.csv"
 
-    FRAMETIMES_CSV_DIR = Path("output/video_frametimes")
-    FRAMETIMES_CSV_FILENAME = "{filestem}_60fps_dvs_frametimes_v1.csv"
+    # FRAMETIMES_CSV_DIR = Path("output/video_frametimes")
+    # FRAMETIMES_CSV_FILENAME = "{filestem}_60fps_dvs_frametimes_v1.csv"
 
-    OUTPUT_BASE_DIR = Path("output/extracted_trajectories") /  f"{SEGMENTATION_STAGE}{DATETIME_PREFIX}"
+    # OUTPUT_BASE_DIR = Path("output/extracted_trajectories") /  f"{SEGMENTATION_STAGE}{DATETIME_PREFIX}"
 
     ##################################
 
@@ -153,6 +153,46 @@ if __name__ == "__main__":
 
     ##################################
 
+    ############### MB #############
+    FPS = 60
+
+    # Format from DarkLabel software: (frame_index, classname, instance_id, is_difficult, x, y, w, h) 
+    #                                      0            1          2            3         4  5  6  7
+    LABELS_CSV_HAS_HEADER = False
+    LABELS_CSV_FRAME_COL = 0 # frame index
+    LABELS_CSV_CLASS_COL = 1 # class name
+    LABELS_CSV_ID_COL = 2 # instance id
+    LABELS_CSV_IS_CONFIDENT_COL = 3
+    LABELS_CSV_X_COL = 4
+    LABELS_CSV_Y_COL = 5
+    LABELS_CSV_W_COL = 6
+    LABELS_CSV_H_COL = 7
+    BB_IS_CONFIDENT_WHEN_MATCHES = "0" # is_difficult: 0(=confident)/1(=difficult)
+
+    # Format for events: (x, y, t (us or ms), p)
+    EVENTS_CSV_HAS_HEADER = False
+    EVENTS_CSV_X_COL = 0
+    EVENTS_CSV_Y_COL = 1
+    EVENTS_CSV_T_COL = 3
+    EVENTS_CSV_P_COL = 2
+    
+    FRAMETIMES_FILE_HAS_HEADER = True
+
+    # 2_separated, 3_classified
+    SEGMENTATION_STAGE = "3_classified"
+
+    # Paths
+    EVENTS_CSV_DIR = Path("../../aufnahmen/exported_csv/")
+    EVENTS_CSV_FILENAME = "{filestem}.csv"
+
+    LABELS_CSV_DIR = Path("output/video_annotations") / SEGMENTATION_STAGE
+    LABELS_CSV_FILENAME = "{filestem}.csv"
+
+    OUTPUT_BASE_DIR = Path("output/extracted_trajectories") /  f"{SEGMENTATION_STAGE}{DATETIME_PREFIX}"
+
+    ##################################
+
+
     WIDTH = 1280
     HEIGHT = 720
     # Precision of the timestamp: for mikroseconds: 1000000, for milliseconds: 1000
@@ -189,7 +229,7 @@ if __name__ == "__main__":
         # "libellen2",
         # "libellen3",
         # "vieleSchmetterlinge1",
-        "vieleSchmetterlinge2",
+        # "vieleSchmetterlinge2",
         # "wespen1",
         # "wespen2",
         # "wespen3",
@@ -200,6 +240,8 @@ if __name__ == "__main__":
         # "4_m-m-h",
         # "5_h-l-h",
         # "6_h-h-h_filtered",
+        # MB
+        "mb-bum2-2",
     ]
 
     print("Using t-scale:", T_SCALE)

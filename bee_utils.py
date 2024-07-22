@@ -7,12 +7,13 @@ from datetime import datetime
 
 # First in tuple MUST be 3-character abbreviation!
 CLASS_ABBREVIATIONS = {
-    "bee":          ("bee","b"),
-    "butterfly":    ("but","u","f"),
-    "dragonfly":    ("dra","d"),
-    "wasp":         ("was","w"),
-    "insect":       ("ins","i"),
-    "other":        ("oth","o"),  # other objects that are not insects
+    "other":        ("oth","o"),        # 0, other objects that are not insects
+    "insect":       ("ins","i"),        # 1, generic/unspecified insect
+    "bee":          ("bee","b"),        # 2
+    "butterfly":    ("but","u","f"),    # 3
+    "dragonfly":    ("dra","d"),        # 4
+    "wasp":         ("was","w"),        # 5
+    "bumblebee":    ("bum","bb"),       # 6
 }
 
 CLASSES = list(CLASS_ABBREVIATIONS.keys())
@@ -38,6 +39,9 @@ SCENE_ID_ALIASES = {
     "mu-4":             ["4_m-m-h", "m4"],
     "mu-5":             ["5_h-l-h", "m5"],
     "mu-6":             ["6_h-h-h_filtered", "m6"],
+    # MB
+    "mb-bum2-2":        ["mb-bum2-2", "mb33"],
+
 }
 """ short_id: [scene_name, id] """
 SCENE_SHORT_ID_ALIASES = {v[1]: [v[0], k] for k, v in SCENE_ID_ALIASES.items()}
@@ -51,14 +55,15 @@ SCENE_NAMES = [s[0] for s in SCENE_ID_ALIASES.values()]
 DIR_NAME_PATTERN = re.compile(r"^(.+)_trajectories.*")
 
 CLASS_COLORS = [
-    (1.0, 0.4980392156862745, 0.0, 1.0), # bee, oragne
-    (0.30196078431372547, 0.6862745098039216, 0.2901960784313726, 1.0), # butterfly, green
-    (0.21568627450980393, 0.49411764705882355, 0.7215686274509804, 1.0), # dragonfly, blue
-    (0.8941176470588236, 0.10196078431372549, 0.10980392156862745, 1.0), # wasp, red
-    (0.596078431372549, 0.3058823529411765, 0.6392156862745098, 1.0), # insect, purple
-    (1.0, 1.0, 0.2, 1.0), # other, yellow
-    (0.6509803921568628, 0.33725490196078434, 0.1568627450980392, 1.0),
-    (0.9686274509803922, 0.5058823529411764, 0.7490196078431373, 1.0)
+    (0.33, 0.33, 0.33, 1.0),        # other, dark grey
+    (0.66, 0.66, 0.66, 1.0),        # insect, light grey
+    (0.95, 0.45, 0.0, 1.0),         # bee, orange
+    (0.6, 0/255, 0.6, 1.0),         # butterfly, purple
+    (0.21, 0.49, 0.72, 1.0),        # dragonfly, blue
+    (0.95, 0.9, 0.1, 1.0),          # wasp, yellow
+    (0.65, 0.33, 0.15, 1.0),        # bumblebee, brown
+    (0.30, 0.68, 0.29, 1.0),        # nothing yet, green
+    (0.96, 0.50, 0.74, 1.0),        # nothing yet, pink
 ]
 
 CLASS_CMAP = colors.ListedColormap(CLASS_COLORS)
@@ -102,28 +107,58 @@ def dir_to_scene_name(trajectory_dir_name:str):
     return scene_name
 
 # make key (scene_id, instance_id, frag_index).
-# example: "dragonfly\dragonfly_h3_6_5.csv".
-# get "h3_6_5" and split to "h3","6","5".
-# (scene_id, instance_id, fragment_index).
-# then convert "6" and "5" to int.
+# example: "dragonfly/dragonfly_h3_6_5.csv" becomes ("hn-dra-1", 6, 5).
 def frag_filename_to_id(filename) -> tuple:
-    frag_id = filename.replace(".csv","").split("_")[-3:]
-    frag_id[1] = int(frag_id[1])
-    frag_id[2] = int(frag_id[2])
+    fn_parts = filename.replace(".csv","").split("_")[-3:]
+    frag_id = [None, 0, 0]
+    scene_id = fn_parts[0]
+    if "-" not in scene_id:
+        # is short_id; Convert to normal id: "h3" -> "hn-dra-1"
+        scene_id = scene_aliases_by_short_id(scene_id)[1]
+    frag_id[0] = scene_id
+    frag_id[1] = int(fn_parts[1])
+    frag_id[2] = int(fn_parts[2])
     frag_id = tuple(frag_id)
     return frag_id
+
 
 def id_tuple_to_str(id:tuple) -> str:
     return f"{id[0]}_{id[1]}_{id[2]}"
 
-def get_rgba_of_class_index(class_index):
+def get_rgba_of_class_index(class_index, alpha=1.0):
     if isinstance(class_index, pd.Series):
         # convert whole series (pd.Series)
-        return class_index.apply(get_rgba_of_class_index)
+        return class_index.apply(lambda v: get_rgba_of_class_index(v, alpha))
     # cnvert single int
-    return CLASS_COLORS[int(class_index)]
+    clr = CLASS_COLORS[int(class_index)]
+    return tuple([*clr[:3]]+[alpha])
     
 
+def show_colors():
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    gradient = np.linspace(0, 1, 256)
+    gradient = np.vstack((gradient, gradient))
+
+    cmap = CLASS_CMAP
+
+    # Create figure and adjust figure height to number of colormaps
+    nrows = 1
+    figh = 0.35 + 0.15 + (nrows + (nrows - 1) * 0.1) * 0.22
+    fig, ax = plt.subplots(nrows=1, figsize=(6.4, figh))
+    fig.subplots_adjust(top=1 - 0.35 / figh, bottom=0.15 / figh,
+                        left=0.2, right=0.99)
+    ax.set_title(' colormaps', fontsize=14)
+
+    ax.imshow(gradient, aspect='auto', cmap=cmap)
+    ax.text(-0.01, 0.5, "cmap test", va='center', ha='right', fontsize=10,
+            transform=ax.transAxes)
+
+    ax.set_axis_off()
+
+    plt.show()
 
 
 
@@ -135,3 +170,6 @@ if __name__ == "__main__":
     print(parse_full_class_name("i", "aaaaa"))
 
     print({v[1]: [k, v[0]] for k, v in SCENE_ID_ALIASES.items()})
+
+    show_colors()
+

@@ -56,7 +56,7 @@ def cv2_imwrite(path, image):
     im_buf_arr.tofile(path)
 
 # image as monochrome image with [0,255] (255=white)
-def draw_t_ticks_into_image(image, pixel_distance, predicitons=None, classes=None, scene_short_id=None, instance_id=None):
+def draw_t_ticks_into_image(image, pixel_distance, predicitons=None, classes=None, scene_id=None, instance_id=None):
     image = image.copy()
     # shape: (height,width)
     h = image.shape[0]
@@ -75,7 +75,7 @@ def draw_t_ticks_into_image(image, pixel_distance, predicitons=None, classes=Non
         cv2.putText(image, text, position, FONT_NAME, FONT_SCALE, FONT_COLOR, thickness=1)
         # write predicted class per fragment and confidence
         if predicitons != None:
-            frag_key = (scene_short_id, int(instance_id), int(part_id))
+            frag_key = (scene_id, int(instance_id), int(part_id))
             pred = predicitons.get(frag_key, None)
             if pred != None:
                 target_name = pred["target_name"]
@@ -344,8 +344,8 @@ if __name__ == "__main__":
                 ty_heatmap_image = hist2d_to_image(ty_heatmap_ycrop)
 
                 if DRAW_T_TICKS:
-                    tx_heatmap_image = draw_t_ticks_into_image(tx_heatmap_image, BINS_PER_T_BUCKET, predicitons, pred_classes, scene_short_id, instance_id)
-                    ty_heatmap_image = draw_t_ticks_into_image(ty_heatmap_image, BINS_PER_T_BUCKET, predicitons, pred_classes, scene_short_id, instance_id)
+                    tx_heatmap_image = draw_t_ticks_into_image(tx_heatmap_image, BINS_PER_T_BUCKET, predicitons, pred_classes, scene_id, instance_id)
+                    ty_heatmap_image = draw_t_ticks_into_image(ty_heatmap_image, BINS_PER_T_BUCKET, predicitons, pred_classes, scene_id, instance_id)
 
                 fig, axs = plt.subplots(3, gridspec_kw={'height_ratios': [1280,720,500]})
                 fig.set_size_inches(20, 8)

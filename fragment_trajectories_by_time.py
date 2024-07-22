@@ -122,7 +122,8 @@ if __name__ == "__main__":
 
     ### Paths
     # TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories/2_separated_mu")
-    TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified")
+    # TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified")
+    TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified_2024-07-21_23-32-07")
     OUTPUT_DATASET_DIR = Path("../../datasets/insect/") / \
         f"{T_BUCKET_LENGTH_MS}ms_{EVENTS_PER_FRAGMENT}pts_{DOWNSAMPLE_METHOD_STR}-ds_{NOISE_REDUCTION_METHOD}-nr"\
         f"{NORMALIZE_STR}{SHUFFLE_T_STR}{DATETIME_STR_PREFIX}"
@@ -171,7 +172,7 @@ if __name__ == "__main__":
             continue
 
         scene_id = bee.scene_name_to_id(scene_name)
-        scene_short_id = bee.scene_short_id_by_id(scene_id)
+        # scene_short_id = bee.scene_short_id_by_id(scene_id)
 
         # Find all files from directory
         trajectory_files = [file for file in trajectory_dir.iterdir() \
@@ -363,8 +364,8 @@ if __name__ == "__main__":
                 output_dir = OUTPUT_DATASET_DIR / clas
                 # save fragment files
                 for i, fragment in enumerate(fragments):
-                    # identify fragment with scene_name + instance_id + fragment_index
-                    output_path = output_dir / f"{clas}_{scene_short_id}_{instance_id}_{fragment.index}.csv"
+                    # identify fragment with scene_id + instance_id + fragment_index
+                    output_path = output_dir / f"{clas}_{scene_id}_{instance_id}_{fragment.index}.csv"
                     fragment.events_df.to_csv(output_path, index=False, header=True, decimal='.', sep=',', float_format='%.3f')
             else:
                 raise RuntimeError("Invalid OUTPUT_DIR_MODE " + str(OUTPUT_DIR_MODE))
