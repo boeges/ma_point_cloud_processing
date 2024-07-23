@@ -109,6 +109,9 @@ def dir_to_scene_name(trajectory_dir_name:str):
 # make key (scene_id, instance_id, frag_index).
 # example: "dragonfly/dragonfly_h3_6_5.csv" becomes ("hn-dra-1", 6, 5).
 def frag_filename_to_id(filename) -> tuple:
+    # get filename
+    if "/" in filename or "\\" in filename:
+        filename = str(filename).split("/")[-1].split("\\")[-1]
     fn_parts = filename.replace(".csv","").split("_")[-3:]
     frag_id = [None, 0, 0]
     scene_id = fn_parts[0]

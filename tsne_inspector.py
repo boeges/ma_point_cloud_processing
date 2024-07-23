@@ -22,12 +22,8 @@ import bee_utils as bee
 T_SCALE = 0.002
 T_BUCKET_LENGTH = 1000 * 100 # 100ms
 
-# ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-07-03_23-11/logs/activations_per_class_2024-07-07_21-31.csv")
-# ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-07-03_23-11/logs/activations_per_class_2024-07-09_23-46.csv")
-ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-07-03_23-11/logs/activations_per_class_2024-07-22_10-40.csv")
-# DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_2024-07-03_23-04-52")
-# DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_2024-07-09_22-50-18")
-DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_2024-07-21_23-38-04")
+ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-07-03_23-11/logs/activations_per_class_2024-07-23_12-30_with_bum.csv")
+DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_2024-07-23_12-17-56")
 # Contains exported 2d projections
 FIGURES_DIR = Path("output/figures/projection_and_hist/tf100ms_tbr250_pred_2024-07-06")
 # Labels mapping file will be exported to this dir
@@ -110,6 +106,7 @@ class TsneInspector:
         # description df:
         # Columns: sample_path, targex_index, target_name, orig_target_name, frag_id:tuple, scene_id, instance_id, fragment_index
         self.descr_df = df[["sample_path", "target_name"]].copy()
+        # self.descr_df.loc[:,"sample_path"].apply()
         self.descr_df["orig_target_name"] = self.descr_df["target_name"].copy()
         # add "frag_id" column
         self.descr_df.loc[:,"frag_id"] = self.descr_df.loc[:,'sample_path'].apply(bee.frag_filename_to_id)
@@ -240,7 +237,7 @@ class TsneInspector:
         button_change_point_size.pack(side=tk.TOP, padx=10, pady=5, fill=tk.X)
 
         # Save buttons
-        button_save_labels_video_ann = tk.Button(master=frame_right, text="Save: Update annotaions file ", width=20, \
+        button_save_labels_video_ann = tk.Button(master=frame_right, text="Save: Update annotations file ", width=20, \
                                                  command=self.save_labels_overwrite_video_annotations)
         button_save_labels_video_ann.pack(side=tk.BOTTOM, padx=10, pady=5, fill=tk.X)
 
@@ -305,15 +302,30 @@ class TsneInspector:
         Args:
             scene_and_instance_ids (pd.DataFrame): Must contain columns "scene_id", "instance_id"
         """
+        frag_inds = self.get_all_frags_of_instance(scene_and_instance_ids)
+        self.select(frag_inds)
+
+    def get_all_frags_of_instance(self, scene_and_instance_ids:pd.DataFrame, return_list=True):
+        """
+        Find all fragments of the given instances.
+        Args:
+            scene_and_instance_ids (pd.DataFrame): _description_
+            return_list (bool, optional): _description_. Defaults to True.
+        Returns:
+            list | pd.DataFrame: frag_inds
+        """
         scene_and_instance_ids = scene_and_instance_ids.loc[:,["scene_id", "instance_id"]]
         scene_and_instance_ids = scene_and_instance_ids.drop_duplicates()
         # Find selected rows
         merged = self.descr_df.reset_index().merge(scene_and_instance_ids, on=["scene_id", "instance_id"], how='left', indicator="merge").set_index('index')
+        # frag inds will be a Series containing all rows with True or False
         frag_inds = merged["merge"]=="both"
-        # get list of indices of rows that are selected
-        frag_inds = frag_inds[frag_inds]
-        frag_inds = frag_inds.index[frag_inds == True].tolist()
-        self.select(frag_inds)
+        if return_list:
+            # convert df of True/False values to list of indices
+            # get list of indices of rows that are selected
+            frag_inds = frag_inds[frag_inds]
+            frag_inds = frag_inds.index[frag_inds == True].tolist()
+        return frag_inds
 
     def update_selection_labels(self, scene_id=None, instance_id=None, fragment_index=None, target_name=None):
             self.scene_id_var.set(          f"Scene:     {scene_id}")
@@ -341,29 +353,21 @@ class TsneInspector:
     def set_class_of_samples(self, selected_ind, new_class_index):
         new_class_name = bee.CLASSES[new_class_index]
         
-        # Find selected rows
+        # Find selected fragments
         selected_instances = self.descr_df.loc[selected_ind, ["scene_id", "instance_id"]]
-        selected_instances = selected_instances.drop_duplicates()
-        merged = self.descr_df.reset_index().merge(selected_instances, on=["scene_id", "instance_id"], how='left', indicator="merge").set_index('index')
-
-        # get indices of of selected rows
-        frag_inds = merged["merge"]=="both"
-        # print(self.descr_df.loc[frag_inds, :])
+        frag_inds = self.get_all_frags_of_instance(selected_instances, return_list=False)
 
         # update target_index and target_name columns of all fragments
         self.descr_df.loc[frag_inds, ["target_index","target_name"]] = new_class_index, new_class_name
 
-        # print(self.descr_df.loc[frag_inds, :])
-
         # TODO Move and rename fragment files to other class dir?
         # or do this in a separate function/button event?
-        
-        # self.fc[frag_inds] = bee.get_rgba_of_class_index(new_class_index)
-        # self.scatter.set_facecolor(self.fc)
-        # self.ec[frag_inds] = self.fc[frag_inds]
-        # self.ec[self.selected_ind] = (0,0,0,1)
-        # self.scatter.set_edgecolor(self.ec)
 
+
+
+
+
+        
         self.update_colors()
         self.fig.canvas.draw_idle()
 
@@ -515,39 +519,52 @@ class TsneInspector:
 
     def save_labels_overwrite_video_annotations(self):
         """ Update annotations file in output/video_annotations/3_classified/ """
-        # TODO 
         # Do backup of file first.
         # On start of program print warning if assigned classes from video_annotations file and dataset-classes dont match.
 
-        scene_ids = self.descr_df["scene_id"].unique()
-        print(scene_ids)
-        for scene_id in scene_ids:
-            print(bee.scene_aliases_by_id(scene_id)[0])
-            # load csv
-            scene_name = bee.scene_aliases_by_id(scene_id)[0]
-            ann_file = self.annotations_dir / (scene_name+".csv")
-            if not ann_file.exists():
-                print("ERROR: Cannot update annotations file; File does not exist;", ann_file)
-                continue
-            columns = ["frame_index", "class", "instance_id", "is_difficult", "x","y","w","h"]
-            df = pd.read_csv(ann_file, sep=",", header=0, names=columns)
-            print(df)
-            break
+        # Problem: Class assignments are in multiple files: activations file, annotations file and in dataset dir structure!
+
+        # scene_ids = self.descr_df["scene_id"].unique()
+        # print(scene_ids)
+        # for scene_id in scene_ids:
+        #     print(bee.scene_aliases_by_id(scene_id)[0])
+        #     # load csv
+        #     scene_name = bee.scene_aliases_by_id(scene_id)[0]
+        #     ann_file = self.annotations_dir / (scene_name+".csv")
+        #     if not ann_file.exists():
+        #         print("ERROR: Cannot update annotations file; File does not exist;", ann_file)
+        #         continue
+        #     columns = ["frame_index", "class", "instance_id", "is_difficult", "x","y","w","h"]
+        #     df = pd.read_csv(ann_file, sep=",", header=0, names=columns)
+        #     print(df)
+        #     break
+
+        print("NOT IMPLEMENTED!")
 
 
     def save_labels_as_new_csv(self):
         """ Create new csv file with id-class mappings. Save at output/instance_classes/instance_classes/. """
-        datetime_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        output_file = LABELS_OUTPUT_DIR / f"fragment_classes_{datetime_str}.csv"
-        output_file.parent.mkdir(exist_ok=True, parents=True)
 
-        # TODO doesnt really make sense; This labels fragments; But it should label full trajectories (series of fragments)
-        # output columns: scene_id, instance_id, fragment_index, class
+        # Check if all intances have exactly one class.
+        # If there are fragments of the same instance with different classes this will return false
+        all_have_one_class = (self.descr_df.groupby(["scene_id", "instance_id"]).nunique()["target_name"] == 1).all()
+        if not all_have_one_class:
+            print("ERROR: Cannot save labels; Some instances have ambiguous (more than one) labels!")
+
+
+        df = self.descr_df.groupby(["scene_id", "instance_id"]).first()[["target_name", "orig_target_name"]]
+        number_of_changed_instances = (df["target_name"] != df["orig_target_name"]).sum()
+
+        # output columns: scene_id, instance_id, class
         output_df = pd.DataFrame()
-        output_df[["scene_id", "instance_id", "fragment_index"]] = self.descr_df[["scene_id", "instance_id", "fragment_index"]]
-        output_df["class"] = self.descr_df["target_name"]
-        output_df.to_csv(output_file, sep=",", header=True, index=False)
-        print("Saved as", output_file)
+        output_df["class"] = df["target_name"]
+
+        datetime_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        output_file = LABELS_OUTPUT_DIR / f"instance_classes_{datetime_str}.csv"
+        output_file.parent.mkdir(exist_ok=True, parents=True)
+        output_df.to_csv(output_file, sep=",", header=True, index=True)
+        print(f"Saved as {output_file}; {number_of_changed_instances} instance labels were changed!")
+
 
     def change_point_size(self):
         self.point_size_index = (self.point_size_index + 1) % len(TsneInspector.point_sizes)

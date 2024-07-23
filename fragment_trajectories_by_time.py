@@ -122,8 +122,7 @@ if __name__ == "__main__":
 
     ### Paths
     # TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories/2_separated_mu")
-    # TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified")
-    TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified_2024-07-21_23-32-07")
+    TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified")
     OUTPUT_DATASET_DIR = Path("../../datasets/insect/") / \
         f"{T_BUCKET_LENGTH_MS}ms_{EVENTS_PER_FRAGMENT}pts_{DOWNSAMPLE_METHOD_STR}-ds_{NOISE_REDUCTION_METHOD}-nr"\
         f"{NORMALIZE_STR}{SHUFFLE_T_STR}{DATETIME_STR_PREFIX}"
@@ -365,7 +364,7 @@ if __name__ == "__main__":
                 # save fragment files
                 for i, fragment in enumerate(fragments):
                     # identify fragment with scene_id + instance_id + fragment_index
-                    output_path = output_dir / f"{clas}_{scene_id}_{instance_id}_{fragment.index}.csv"
+                    output_path = output_dir / f"{scene_id}_{instance_id}_{fragment.index}.csv"
                     fragment.events_df.to_csv(output_path, index=False, header=True, decimal='.', sep=',', float_format='%.3f')
             else:
                 raise RuntimeError("Invalid OUTPUT_DIR_MODE " + str(OUTPUT_DIR_MODE))
