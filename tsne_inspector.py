@@ -22,8 +22,11 @@ import bee_utils as bee
 T_SCALE = 0.002
 T_BUCKET_LENGTH = 1000 * 100 # 100ms
 
-ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-07-03_23-11/logs/activations_per_class_2024-07-23_12-30_with_bum.csv")
-DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_2024-07-23_12-17-56")
+# ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-07-03_23-11/logs/activations_per_class_2024-07-23_12-30_with_bum.csv")
+# ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-07-25_22-10/logs/activations_per_class_2024-07-25_22-58.csv")
+ACTIVATIONS_FILE = Path("../foldingnet2/snapshot/Reconstruct_insect_foldnet_gaussian_k20_e1600/features/activations_per_sample_2024-07-30_18-04.csv")
+# DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_2024-07-23_12-17-56")
+DATASET_DIR = Path("../../datasets/insect/100ms_2048pts_fps-ds_sor-nr_norm_shufflet_1")
 # Contains exported 2d projections
 FIGURES_DIR = Path("output/figures/projection_and_hist/tf100ms_tbr250_pred_2024-07-06")
 # Labels mapping file will be exported to this dir
@@ -118,6 +121,10 @@ class TsneInspector:
         self.descr_df.loc[:,"target_index"] = self.descr_df.loc[:,"target_name"].map(classes_map)
 
         # activations df
+        # [for c in df.columns if c.beginswith("")]
+        # print(list(df.columns))
+        # exit()
+
         self.activations_df = df.loc[:,"act_0":"act_255"].copy()
         # print("df shape:", self.df.shape, "descr_df:", self.descr_df.shape, "activations_df:", self.activations_df.shape)
 
@@ -182,12 +189,12 @@ class TsneInspector:
         canvas.draw()
         canvas.mpl_connect("key_press_event", lambda event: print(f"you pressed {event.key}"))
         canvas.mpl_connect("key_press_event", key_press_handler)
-        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
 
         # pack_toolbar=False will make it easier to use a layout manager later on.
         toolbar = NavigationToolbar2Tk(canvas, frame_left, pack_toolbar=False)
         toolbar.update()
-        toolbar.pack(side=tk.BOTTOM, fill=tk.X)
+        toolbar.pack(side=tk.TOP, fill=tk.X)
 
         # Right frame
         frame_right = tk.Frame(master=root)
@@ -262,16 +269,6 @@ class TsneInspector:
         prev_selected_ind = self.selected_ind
         self.selected_ind = selected_ind
 
-        # set border color to black
-        self.ec[prev_selected_ind] = self.fc[prev_selected_ind]
-        self.ec[selected_ind] = (0.0,0.0,0.0,1.0)
-        self.scatter.set_edgecolor(self.ec)
-
-        # Set border width
-        # self.lw[prev_selected_ind] = 1.5
-        # self.lw[selected_ind] = 2.0
-        # self.scatter.set_linewidth(self.lw)
-
         # How many points are selectd?
         if len(selected_ind) == 0:
             self.update_selection_labels()
@@ -285,6 +282,16 @@ class TsneInspector:
             self.show_fragment(sample_path)
         else:
             self.update_selection_labels(fragment_index=f"multiple ({len(selected_ind)})")
+
+        # Set border color to black
+        self.ec[prev_selected_ind] = self.fc[prev_selected_ind]
+        self.ec[selected_ind] = (0.0,0.0,0.0,1.0)
+        self.scatter.set_edgecolor(self.ec)
+
+        # Set border width
+        # self.lw[prev_selected_ind] = 1.5
+        # self.lw[selected_ind] = 2.0
+        # self.scatter.set_linewidth(self.lw)
 
         self.update_class_radiobuttons(selected_ind)
         self.fig.canvas.draw_idle()
@@ -362,10 +369,6 @@ class TsneInspector:
 
         # TODO Move and rename fragment files to other class dir?
         # or do this in a separate function/button event?
-
-
-
-
 
         
         self.update_colors()

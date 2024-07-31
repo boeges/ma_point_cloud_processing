@@ -140,14 +140,14 @@ if __name__ == "__main__":
     # Save trajectory statistics
     SAVE_STATISTICS = True
     # Save images of complete paths
-    SAVE_IMAGES = True
+    SAVE_IMAGES = False
     # Save images of each individual bucket (WARNING: Creates many images)
     SAVE_BUCKET_IMAGES = False
     # BINS_PER_T_BUCKET = T_BUCKET_LENGTH_MS # a bucket for every ms
     # For saving matplotlib images
     SAVE_IMAGE_DPI = 300
     # Whether to crop images of the full flight trajectories to their used y areas
-    Y_CROP_FULL_TRAJ_IMAGES = False
+    Y_CROP_FULL_TRAJ_IMAGES = True
     # Draw ticks, vertical lines and text
     DRAW_T_TICKS = True
     DRAW_PREDICTIONS = True
