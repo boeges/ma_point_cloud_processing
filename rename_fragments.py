@@ -15,7 +15,7 @@ import os
 import bee_utils as bee
 
 
-DIR = Path("../../datasets/insect/100ms_2048pts_fps-ds_sor-nr_norm_shufflet_1")
+DIR = Path("../../datasets/insect/100ms_2048pts_fps-ds_sor-nr_1")
 
 # Find all csv files in CSV_DIR
 files = list(DIR.glob("*/*.csv"))
