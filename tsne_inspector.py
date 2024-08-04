@@ -21,12 +21,20 @@ import bee_utils as bee
 
 T_SCALE = 0.002
 T_BUCKET_LENGTH = 1000 * 100 # 100ms
+# Which samples of the dataset to show; "all", "train" or "test";
+# Irrelevant for Autoencoder since its trained on all samples
+SHOW_SPLIT = "all"
 
 # ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-07-03_23-11/logs/activations_per_class_2024-07-23_12-30_with_bum.csv")
 # ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-07-25_22-10/logs/activations_per_class_2024-07-25_22-58.csv")
-ACTIVATIONS_FILE = Path("../foldingnet2/snapshot/Reconstruct_insect_foldnet_gaussian_k20_e1600/features/activations_per_sample_2024-07-30_18-04.csv")
-# DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_2024-07-23_12-17-56")
-DATASET_DIR = Path("../../datasets/insect/100ms_2048pts_fps-ds_sor-nr_norm_shufflet_1")
+# ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/msg_cls6B_e40_bs8_split7030/logs/activations_per_sample_2024-08-03_22-36.csv")
+# ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/msg_cls6B_e40_bs8_split2080/logs/activations_per_sample_2024-08-03_22-37.csv")
+# ACTIVATIONS_FILE = Path("../foldingnet2/snapshot/Reconstruct_insect_foldnet_gaussian_k20_e1600/features/activations_per_sample_2024-07-30_18-04.csv")
+# ACTIVATIONS_FILE = Path("../foldingnet2/snapshot/Reconstruct_insect_foldnet_gaussian_k20_e2000_feat512_pts4096_augment/features/activations_per_sample_2024-08-03_22-16.csv")
+ACTIVATIONS_FILE = Path("../foldingnet2/snapshot/Reconstruct_insect_foldnet_gaussian_k40_e1600_feat1024_pts4096_augment/features/activations_per_sample_2024-08-04_12-14.csv")
+DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_2024-07-23_12-17-56")
+# DATASET_DIR = Path("../../datasets/insect/100ms_2048pts_fps-ds_sor-nr_norm_shufflet_1")
+DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_1/train_test_split_2080.txt")
 # Contains exported 2d projections
 FIGURES_DIR = Path("output/figures/projection_and_hist/tf100ms_tbr250_pred_2024-07-06")
 # Labels mapping file will be exported to this dir
@@ -84,16 +92,20 @@ class TsneInspector:
 
     point_sizes = [10,25,50,100]
 
-    def __init__(self, activations_file, dataset_dir, figures_dir, labels_output_dir, annotations_dir) -> None:
+    def __init__(self, activations_file, dataset_dir, figures_dir, labels_output_dir, annotations_dir, split_file, split) -> None:
         self.activations_file = activations_file
         self.dataset_dir = dataset_dir
         self.figures_dir = figures_dir
         self.labels_output_dir = labels_output_dir
         self.annotations_dir = annotations_dir
+        self.split_file = split_file
+        self.split = split
         self.fig = None
         # selected with lasso or by click
         self.selected_ind = np.array([], dtype=int)
         self.point_size_index = 1
+
+        assert self.split in [None, "all", "train", "test"]
 
         self.create_dfs()
         self.create_tsne()
@@ -103,36 +115,48 @@ class TsneInspector:
 
     def create_dfs(self):
         # load activations file
-        df = pd.read_csv(self.activations_file, sep=",", header="infer")
+        act_file_df = pd.read_csv(self.activations_file, sep=",", header="infer")
 
         # Split df up in description df and activations df
         # description df:
         # Columns: sample_path, targex_index, target_name, orig_target_name, frag_id:tuple, scene_id, instance_id, fragment_index
-        self.descr_df = df[["sample_path", "target_name"]].copy()
+        self.df = act_file_df[["sample_path", "target_name"]].copy()
         # self.descr_df.loc[:,"sample_path"].apply()
-        self.descr_df["orig_target_name"] = self.descr_df["target_name"].copy()
+        self.df["orig_target_name"] = self.df["target_name"].copy()
         # add "frag_id" column
-        self.descr_df.loc[:,"frag_id"] = self.descr_df.loc[:,'sample_path'].apply(bee.frag_filename_to_id)
+        self.df.loc[:,"frag_id"] = self.df.loc[:,'sample_path'].apply(bee.frag_filename_to_id)
         # split up frag_id-tuple into 3 columns
-        self.descr_df[['scene_id', 'instance_id', "fragment_index"]] = pd.DataFrame(self.descr_df['frag_id'].tolist(), index=self.descr_df.index)
+        self.df[['scene_id', 'instance_id', "fragment_index"]] = pd.DataFrame(self.df['frag_id'].tolist(), index=self.df.index)
         # self.descr_df["scene_id"] = self.descr_df["scene_id"].apply(lambda s: bee.scene_aliases_by_short_id(s)[1])
         # add "target_index" column
         classes_map = dict(zip(bee.CLASSES, range(len(bee.CLASSES))))
-        self.descr_df.loc[:,"target_index"] = self.descr_df.loc[:,"target_name"].map(classes_map)
+        self.df.loc[:,"target_index"] = self.df.loc[:,"target_name"].map(classes_map)
+
+        if self.split_file is not None:
+            # find out split (train/test) of each fragment
+            # fid example: "hn-dra-1_16_6"
+            train_fids, test_fids = bee.read_split_file(DATASET_SPLIT_FILE)
+            self.df["split"] = self.df["frag_id"].apply(lambda frag_tuple: self.apply_split(frag_tuple, train_fids, test_fids))
+        else:
+            self.df["split"] = ""
 
         # activations df
-        # [for c in df.columns if c.beginswith("")]
-        # print(list(df.columns))
-        # exit()
+        self.max_act_col = [c for c in act_file_df.columns if str(c).startswith("act_")][-1]
+        print("Using activation columns: act_0 -", self.max_act_col)
+        act_df = act_file_df.loc[:,"act_0":self.max_act_col].copy()
+        # print(act_df.head())
+        self.df = pd.concat([self.df, act_df], axis=1)
+        # print(self.descr_df.head())
 
-        self.activations_df = df.loc[:,"act_0":"act_255"].copy()
-        # print("df shape:", self.df.shape, "descr_df:", self.descr_df.shape, "activations_df:", self.activations_df.shape)
+        if self.split != "all":
+            self.df = self.df.drop(self.df[self.df["split"] != self.split].index)
 
 
     def create_tsne(self):
         # Create 2D t-sne
         tsne = TSNE(n_components=2, init="pca", learning_rate="auto", random_state=0)
-        self.tsne_result = tsne.fit_transform(self.activations_df)
+        act_df = self.df.loc[:,"act_0":self.max_act_col].copy()
+        self.tsne_result = tsne.fit_transform(act_df)
         # print("tsne result shape", self.tsne_result.shape)
 
 
@@ -202,8 +226,8 @@ class TsneInspector:
         frame_right.pack(fill=tk.BOTH, side=tk.RIGHT, expand=True)
 
         # This label sets the width for the right frame!
-        self.label_selected_cap = tk.Label(frame_right, text="Selected:", width=30, pady=5, anchor="w", font=("Consolas", 11) )
-        self.label_selected_cap.pack(side=tk.TOP, fill=tk.X)
+        tk.Label(frame_right, text="Selected:", width=30, pady=5, anchor="w", font=("Consolas", 11) )\
+            .pack(side=tk.TOP, fill=tk.X)
 
         self.scene_id_var = tk.StringVar()
         self.label_scene_id = tk.Label(frame_right, textvariable=self.scene_id_var, pady=0, anchor="w", font=("Consolas", 11) )
@@ -223,13 +247,29 @@ class TsneInspector:
 
         self.update_selection_labels()
 
+        tk.Label(frame_right, text="Assign class to selection:", width=30, pady=5, anchor="w", font=("Consolas", 11) )\
+                .pack(side=tk.TOP, fill=tk.X)
+
         self.class_var = tk.IntVar(master=root, value=-1)
         self.rb_classes = []
         for class_index,class_name in enumerate(bee.CLASSES): #  + ["no class"]
             rb = tk.Radiobutton(frame_right, text=class_name.upper(), variable=self.class_var, value=class_index, anchor="w", \
-                                command=lambda: self.rb_value_change(rb), font=("Consolas", 10))
+                                command=lambda: self.rb_classes_value_change(rb), font=("Consolas", 10))
             rb.pack(side=tk.TOP, fill=tk.X)
             self.rb_classes.append(rb)
+
+
+        tk.Label(frame_right, text="Visible dataset split:", width=30, pady=5, anchor="w", font=("Consolas", 11) )\
+            .pack(side=tk.TOP, fill=tk.X)
+
+        self.split_vals = ["all","train","test"]
+        self.split_var = tk.StringVar(master=root, value=self.split_vals[0])
+        self.rbs_split = []
+        for i,split_val in enumerate(self.split_vals):
+            rb = tk.Radiobutton(frame_right, text=split_val.upper(), variable=self.split_var, value=split_val, anchor="w", \
+                                command=lambda: self.rbs_split_value_change(rb), font=("Consolas", 10))
+            rb.pack(side=tk.TOP, fill=tk.X)
+            self.rbs_split.append(rb)
 
         button_unselect = tk.Button(master=frame_right, text="Unselect all", width=20, command=self.unselect_all)
         button_unselect.pack(side=tk.TOP, padx=10, pady=5, fill=tk.X)
@@ -274,9 +314,9 @@ class TsneInspector:
             self.update_selection_labels()
         elif len(selected_ind) == 1:
             ind = selected_ind[0]
-            frag_id = self.descr_df.at[ind, "frag_id"]
-            target_name = self.descr_df.at[ind, "target_name"].upper()
-            sample_path = self.descr_df.at[ind, "sample_path"]
+            frag_id = self.df.at[ind, "frag_id"]
+            target_name = self.df.at[ind, "target_name"].upper()
+            sample_path = self.df.at[ind, "sample_path"]
             # Update the UI
             self.update_selection_labels(frag_id[0], frag_id[1], frag_id[2], target_name)
             self.show_fragment(sample_path)
@@ -301,7 +341,7 @@ class TsneInspector:
         Select all fragments (points) of currently selected instance (or of multiple instances).
         """
         # Find selected ids
-        selected_instances = self.descr_df.loc[self.selected_ind, ["scene_id", "instance_id"]]
+        selected_instances = self.df.loc[self.selected_ind, ["scene_id", "instance_id"]]
         self.select_all_frags_of_instance(selected_instances)
 
     def select_all_frags_of_instance(self, scene_and_instance_ids:pd.DataFrame):
@@ -324,7 +364,7 @@ class TsneInspector:
         scene_and_instance_ids = scene_and_instance_ids.loc[:,["scene_id", "instance_id"]]
         scene_and_instance_ids = scene_and_instance_ids.drop_duplicates()
         # Find selected rows
-        merged = self.descr_df.reset_index().merge(scene_and_instance_ids, on=["scene_id", "instance_id"], how='left', indicator="merge").set_index('index')
+        merged = self.df.reset_index().merge(scene_and_instance_ids, on=["scene_id", "instance_id"], how='left', indicator="merge").set_index('index')
         # frag inds will be a Series containing all rows with True or False
         frag_inds = merged["merge"]=="both"
         if return_list:
@@ -343,13 +383,13 @@ class TsneInspector:
     def update_class_radiobuttons(self, selected_ind):
         if len(selected_ind) == 1:
             ind = selected_ind[0]
-            class_index = self.descr_df.at[ind, "target_index"]
+            class_index = self.df.at[ind, "target_index"]
             self.class_var.set(int(class_index))
         else:
             self.class_var.set(-1)
 
 
-    def rb_value_change(self, rb):
+    def rb_classes_value_change(self, rb):
         if self.selected_ind is None or len(self.selected_ind)==0:
             print("No sample selected!")
             return
@@ -357,15 +397,21 @@ class TsneInspector:
         self.set_class_of_samples(self.selected_ind, class_index)
 
 
+    def rbs_split_value_change(self, rb):
+        split = self.split_var.get() # "all", "train" or "test"
+        # TODO only show split points
+        self.scatter.set_offsets()
+
+
     def set_class_of_samples(self, selected_ind, new_class_index):
         new_class_name = bee.CLASSES[new_class_index]
         
         # Find selected fragments
-        selected_instances = self.descr_df.loc[selected_ind, ["scene_id", "instance_id"]]
+        selected_instances = self.df.loc[selected_ind, ["scene_id", "instance_id"]]
         frag_inds = self.get_all_frags_of_instance(selected_instances, return_list=False)
 
         # update target_index and target_name columns of all fragments
-        self.descr_df.loc[frag_inds, ["target_index","target_name"]] = new_class_index, new_class_name
+        self.df.loc[frag_inds, ["target_index","target_name"]] = new_class_index, new_class_name
 
         # TODO Move and rename fragment files to other class dir?
         # or do this in a separate function/button event?
@@ -379,7 +425,7 @@ class TsneInspector:
         # Doesnt really work!!!
         # face colors
         # array of tuple to 2d-array
-        self.fc = np.array([ *( bee.get_rgba_of_class_index(self.descr_df.loc[:,"target_index"], 0.66).to_numpy() ) ])
+        self.fc = np.array([ *( bee.get_rgba_of_class_index(self.df.loc[:,"target_index"], 0.66).to_numpy() ) ])
         self.scatter.set_facecolor(self.fc)
         # edge colors
         self.ec = self.fc.copy()
@@ -437,9 +483,9 @@ class TsneInspector:
         distances = np.hypot(x - self.tsne_result[:,0], y - self.tsne_result[:,1])
         closest_ind = distances.argmin()
 
-        frag_id = self.descr_df.at[closest_ind, "frag_id"]
-        target_name = self.descr_df.at[closest_ind, "target_name"]
-        sample_path = self.descr_df.at[closest_ind, "sample_path"]
+        frag_id = self.df.at[closest_ind, "frag_id"]
+        target_name = self.df.at[closest_ind, "target_name"]
+        sample_path = self.df.at[closest_ind, "sample_path"]
 
         # Update the UI
         self.selected_id_var.set(f"Closest sample: {frag_id}")
@@ -484,7 +530,7 @@ class TsneInspector:
             print("ERROR: No sample selected!")
         elif len(self.selected_ind)==1:
             ind = self.selected_ind[0]
-            scene_id, instance_id, frag_index = self.descr_df.at[ind, "frag_id"]
+            scene_id, instance_id, frag_index = self.df.at[ind, "frag_id"]
             scene_name = bee.scene_aliases_by_id(scene_id)[0]
             scene_dir = self.figures_dir / (scene_name+"_trajectories")
 
@@ -550,12 +596,12 @@ class TsneInspector:
 
         # Check if all intances have exactly one class.
         # If there are fragments of the same instance with different classes this will return false
-        all_have_one_class = (self.descr_df.groupby(["scene_id", "instance_id"]).nunique()["target_name"] == 1).all()
+        all_have_one_class = (self.df.groupby(["scene_id", "instance_id"]).nunique()["target_name"] == 1).all()
         if not all_have_one_class:
             print("ERROR: Cannot save labels; Some instances have ambiguous (more than one) labels!")
 
 
-        df = self.descr_df.groupby(["scene_id", "instance_id"]).first()[["target_name", "orig_target_name"]]
+        df = self.df.groupby(["scene_id", "instance_id"]).first()[["target_name", "orig_target_name"]]
         number_of_changed_instances = (df["target_name"] != df["orig_target_name"]).sum()
 
         # output columns: scene_id, instance_id, class
@@ -575,9 +621,20 @@ class TsneInspector:
         self.scatter.set_sizes([point_size])
         self.fig.canvas.draw_idle()
 
+    def apply_split(self, frag_tuple, train_fids, test_fids):
+        fid = bee.id_tuple_to_str(frag_tuple)
+        if fid in train_fids:
+            return "train"
+        elif fid in test_fids:
+            return "test"
+        else:
+            return None
+        
+
 
 if __name__ == '__main__':
-    tsni = TsneInspector(ACTIVATIONS_FILE, DATASET_DIR, FIGURES_DIR, LABELS_OUTPUT_DIR, ANNOTATIONS_DIR)
+    tsni = TsneInspector(ACTIVATIONS_FILE, DATASET_DIR, FIGURES_DIR, LABELS_OUTPUT_DIR, \
+                         ANNOTATIONS_DIR, DATASET_SPLIT_FILE, SHOW_SPLIT)
     tsni.show()
     
 

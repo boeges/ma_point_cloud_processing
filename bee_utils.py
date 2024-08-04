@@ -164,15 +164,36 @@ def show_colors():
     plt.show()
 
 
+def read_split_file(split_file_path):
+    """
+    split file has columns: split [train/test], class name, fragment_id
+    fragment id example: hn-bee-1_0_17
+    Args:
+        split_file_path (_type_): _description_
+    """
+    with open(split_file_path) as f:
+        lines = f.read().splitlines()
+        train_fids = []
+        test_fids = []
+        for line in lines:
+            split = line.split(",")[0]
+            fid = line.split(",")[2]
+            if split == "train":
+                train_fids.append(fid)
+            elif split == "test":
+                test_fids.append(fid)
+    return train_fids, test_fids
+
 
 # DEBUG
 if __name__ == "__main__":
-    print("FULL_CLASS_NAMES", CLASSES)
-    print("SCENE_IDS", SCENE_IDS)
-    print("SCENE_NAMES", SCENE_NAMES)
-    print(parse_full_class_name("i", "aaaaa"))
+    # print("FULL_CLASS_NAMES", CLASSES)
+    # print("SCENE_IDS", SCENE_IDS)
+    # print("SCENE_NAMES", SCENE_NAMES)
+    # print(parse_full_class_name("i", "aaaaa"))
 
-    print({v[1]: [k, v[0]] for k, v in SCENE_ID_ALIASES.items()})
+    # print({v[1]: [k, v[0]] for k, v in SCENE_ID_ALIASES.items()})
 
-    show_colors()
+    # show_colors()
 
+    print(read_split_file("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_1/train_test_split_2080.txt"))
