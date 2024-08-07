@@ -104,7 +104,7 @@ if __name__ == "__main__":
     T_BUCKET_LENGTH_MS = int(T_BUCKET_LENGTH / TIMESTEPS_PER_SECOND * 1000)
     # This is our target event count per fragment; Use "all" to keep original event count
     # EVENTS_PER_FRAGMENT = "all"
-    EVENTS_PER_FRAGMENT = 2048
+    EVENTS_PER_FRAGMENT = 4096
     # Min number of events a fragment needs before adding or removing events
     MIN_EVENTS_COUNT = EVENTS_PER_FRAGMENT//2
 
@@ -122,7 +122,8 @@ if __name__ == "__main__":
 
     ### Paths
     # TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories/2_separated_mu")
-    TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified")
+    # TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified")
+    TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified_2024-08-07_15-27-15")
     OUTPUT_DATASET_DIR = Path("../../datasets/insect/") / \
         f"{T_BUCKET_LENGTH_MS}ms_{EVENTS_PER_FRAGMENT}pts_{MIN_EVENTS_COUNT}minpts"\
         f"_{DOWNSAMPLE_METHOD_STR}-ds_{NOISE_REDUCTION_METHOD}-nr"\
@@ -166,13 +167,15 @@ if __name__ == "__main__":
     for trajectory_dir in trajectory_dirs:
         # Extract trajectory dir simple name
         try:
-            scene_name = bee.dir_to_scene_name(trajectory_dir.name)
+            # return scene name or scene id, depending on dir
+            scene_id = bee.dir_to_scene_name(trajectory_dir.name)
         except RuntimeError:
             print("### Skipping", trajectory_dir.name, ", Doesnt match file scene dir pattern!")
             continue
 
-        scene_id = bee.scene_name_to_id(scene_name)
-        # scene_short_id = bee.scene_short_id_by_id(scene_id)
+        if not bee.is_scene_id(scene_id):
+            # convert scene name to id; If it is already an id, it returns the id
+            scene_id = bee.scene_name_to_id(scene_id)
 
         # Find all files from directory
         trajectory_files = [file for file in trajectory_dir.iterdir() \

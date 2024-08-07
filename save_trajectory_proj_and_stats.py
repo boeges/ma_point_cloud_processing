@@ -102,12 +102,13 @@ if __name__ == "__main__":
     np.set_printoptions(suppress=True,precision=3)
     pd.set_option('display.float_format', lambda x: '%.3f' % x)
 
+    ADD_TIME_TO_FILENAME = True
     DATETIME_STR = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    DATETIME_STR_PREFIX = ('_'+DATETIME_STR) if ADD_TIME_TO_FILENAME else ''
 
     PRINT_PROGRESS_EVERY_N_PERCENT = 1
 
-    ADD_TIME_TO_FILENAME = True
-    OVERWRITE_EXISTING = True
+    OVERWRITE_EXISTING = False
 
     WIDTH = 1280
     HEIGHT = 720
@@ -150,7 +151,7 @@ if __name__ == "__main__":
     Y_CROP_FULL_TRAJ_IMAGES = True
     # Draw ticks, vertical lines and text
     DRAW_T_TICKS = True
-    DRAW_PREDICTIONS = True
+    DRAW_PREDICTIONS = False
     DRAW_PREDICTIONS_STR = "_pred" if DRAW_PREDICTIONS else ""
     # For text of ticks
     FONT_NAME = cv2.FONT_HERSHEY_SIMPLEX
@@ -162,7 +163,7 @@ if __name__ == "__main__":
     TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified")
     PREDICTION_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-07-03_23-11/logs/pred_per_sample_2024-07-05_12-39.csv")
     # tf: timeframe
-    FIGURE_OUTPUT_DIR = Path("output/figures/projection_and_hist") / f"tf{T_BUCKET_LENGTH_MS}ms_tbr{BINS_PER_T_BUCKET}{DRAW_PREDICTIONS_STR}_{DATETIME_STR}"
+    FIGURE_OUTPUT_DIR = Path("output/figures/projection_and_hist") / f"tf{T_BUCKET_LENGTH_MS}ms_tbr{BINS_PER_T_BUCKET}{DRAW_PREDICTIONS_STR}{DATETIME_STR_PREFIX}"
     STATS_OUTPUT_DIR = Path("output/statistics/hist/") / f"tf{T_BUCKET_LENGTH_MS}ms_{DATETIME_STR}"
 
     # stats = {
@@ -228,19 +229,18 @@ if __name__ == "__main__":
     trajectory_dirs = [d for d in TRAJECTORIES_BASE_DIR.glob("*_trajectories*") if d.name not in existing_figure_dir_names]
 
     # FOR TESTING! Only use this trajectory
-    # trajectory_dirs = [TRAJECTORIES_BASE_DIR / "wespen3_trajectories"]
+    # trajectory_dirs = [TRAJECTORIES_BASE_DIR / "mb-dra1-1_trajectories"]
 
     for trajectory_dir in trajectory_dirs:
         # Extract trajectory dir simple name
         try:
-            scene_name = bee.dir_to_scene_name(trajectory_dir.name)
-            scene_id = bee.scene_name_to_id(scene_name)
-            scene_short_id = bee.scene_short_id_by_id(scene_id)
-        except RuntimeError:
-            print("Skipping:", trajectory_dir.name, ", Doesnt match file scene dir pattern!")
+            scene_id = bee.dir_to_scene_name(trajectory_dir.name)
+            scene_id = bee.scene_name_to_id(scene_id)
+        except RuntimeError as e:
+            print("Skipping:", trajectory_dir.name, e)
             continue
 
-        stats.setdefault(scene_name, {"event_count": None, "length_s": None, "trajectories": {}})
+        stats.setdefault(scene_id, {"event_count": None, "length_s": None, "trajectories": {}})
 
         # Find all files from directory; Skip existing
         trajectory_files = [file for file in trajectory_dir.iterdir() if file.is_file()]
@@ -258,12 +258,12 @@ if __name__ == "__main__":
             start_ts = int(name_arr[3][5:])
             fragmentation_key = f"tf{T_BUCKET_LENGTH_MS}ms"
 
-            traj_stats = stats[scene_name]["trajectories"].setdefault(int(instance_id), \
+            traj_stats = stats[scene_id]["trajectories"].setdefault(int(instance_id), \
                     {"event_count": None, "length_s": None, "fragmentations": {}})
             fragmentation_stats = traj_stats["fragmentations"].setdefault(fragmentation_key, \
                     {"time_frame_ms": T_BUCKET_LENGTH_MS, "fragments": {}})
 
-            print(f"Processing: \"{scene_name}/{instance_id}\" ({clas}) ({pts} points)")
+            print(f"Processing: \"{scene_id}/{instance_id}\" ({clas}) ({pts} points)")
 
             df = pd.read_csv(trajectory_filepath, sep=',', header="infer")
 
@@ -317,7 +317,7 @@ if __name__ == "__main__":
                     fragment_stats["event_count"] = int(event_count)
 
                     # Columns: scene, instance_id, fragment_id, class, traj_evnt_count, traj_len_s, frag_evnt_count, frag_len_s
-                    fragments_stats.append( [scene_name, int(instance_id), bucket_index, clas, len(df), traj_stats["length_s"], int(event_count), t_length_real/TIMESTEPS_PER_SECOND] )
+                    fragments_stats.append( [scene_id, int(instance_id), bucket_index, clas, len(df), traj_stats["length_s"], int(event_count), t_length_real/TIMESTEPS_PER_SECOND] )
 
             if SAVE_IMAGES:
                 # colors for bars in events histogram
@@ -349,7 +349,7 @@ if __name__ == "__main__":
 
                 fig, axs = plt.subplots(3, gridspec_kw={'height_ratios': [1280,720,500]})
                 fig.set_size_inches(20, 8)
-                fig.suptitle(f't-x-, t-y-projection and event histogram of "{scene_name}/{instance_id}" ({clas}) (length: {max_t_str}, {pts} points)')
+                fig.suptitle(f't-x-, t-y-projection and event histogram of "{scene_id}/{instance_id}" ({clas}) (length: {max_t_str}, {pts} points)')
                 axs[0].imshow(tx_heatmap_image, origin='upper', cmap="gray", aspect="auto")
                 axs[1].imshow(ty_heatmap_image, origin='upper', cmap="gray", aspect="auto")
                 axs[2].set_xlim(left=0, right=number_of_buckets)

@@ -22,6 +22,12 @@ if __name__ == "__main__":
     HEIGHT = 720
     FPS = 60
 
+    # !!!
+    EVENTS_CSV_X_COL = 0
+    EVENTS_CSV_Y_COL = 1
+    EVENTS_CSV_P_COL = 2
+    EVENTS_CSV_T_COL = 3
+
     ADD_TIME_TO_FILENAME = False
     VIDEO_FILE_PREFIX = "_v3"
 
@@ -35,7 +41,8 @@ if __name__ == "__main__":
     # Must be an integer! e.g. 1 or 10
     PRINT_PROGRESS_EVERY_N_PERCENT = 1
 
-    CSV_DIR = Path("../../datasets/Insektenklassifikation")
+    # CSV_DIR = Path("../../datasets/Insektenklassifikation")
+    CSV_DIR = Path("../../aufnahmen/2024-08-06_libellen/exported_csv")
     # CSV_DIR = Path("../../datasets/juli_instance_segmented")
     OUTPUT_DIR = Path("output/csv_to_video")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -55,8 +62,9 @@ if __name__ == "__main__":
 
     # ... or use only this file:
     # csv_filenames = [
-    #     "vieleSchmetterlinge2.csv"
+    #     # "vieleSchmetterlinge2.csv"
     #     # "COMBINED1_scale_classify_2022-07-16_19-24-08_teil3.csv"
+    #     # "mb-dra1-1.csv"
     # ]
 
     for csv_filename in csv_filenames:
@@ -98,8 +106,8 @@ if __name__ == "__main__":
             print("Progress (%): ", end="")
 
             for row_index, row in enumerate(reader):
-                # row: (x, y, t, p)
-                timestamp = float(row[2])
+                # row: (x, y, t, p) or (x, y, p, t)
+                timestamp = float(row[EVENTS_CSV_T_COL])
                 if timestamp >= next_frame_start:
                     # event is part of next frame
 
@@ -115,7 +123,7 @@ if __name__ == "__main__":
 
 
                 # draw event
-                frame[int(row[1]), int(row[0])] = 255
+                frame[int(row[EVENTS_CSV_Y_COL]), int(row[EVENTS_CSV_X_COL])] = 255
 
                 # print progress
                 progress_percent = int(row_index / row_count * 100)

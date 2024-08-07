@@ -13,8 +13,8 @@ import os
 
 
 
-DIR = Path("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen")
-TARGET_DIR = DIR / "renamed"
+DIR = Path("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/2024-08-06_libellen/exported_csv")
+TARGET_DIR = DIR #/ "renamed"
 
 # Find all csv files in CSV_DIR
 files = [file for file in DIR.iterdir() if file.is_file() and file.name.startswith("fe_recording")]
@@ -26,11 +26,8 @@ files = [file for file in DIR.iterdir() if file.is_file() and file.name.startswi
 # map old to new filename scheme
 # from: (to, scene_name)
 range_map = {
-    "2024-07-18T11-42-08": ("2024-07-18T11-51-10", "bee1"),
-    "2024-07-18T11-59-40": ("2024-07-18T12-08-42", "bee2"),
-    "2024-07-18T12-34-02": (None, "bee2"),
-    "2024-07-18T12-16-40": ("2024-07-18T12-25-42", "bum1"),
-    "2024-07-18T12-30-01": ("2024-07-18T12-33-02", "bum2"),
+    "2024-07-18T14-34-27": ("2024-07-18T14-56-28", "dra1"),
+    "2024-07-18T15-53-35": ("2024-07-18T16-22-11", "dra2"),
 }
 
 

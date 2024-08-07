@@ -19,6 +19,7 @@ CLASS_ABBREVIATIONS = {
 CLASSES = list(CLASS_ABBREVIATIONS.keys())
 
 # scene_id: [full scene name, short scene id]
+# TODO remove short ids!
 """ scene_id: [full scene name, short scene id] """
 SCENE_ID_ALIASES = {
     # HSNR
@@ -40,6 +41,7 @@ SCENE_ID_ALIASES = {
     "mu-5":             ["5_h-l-h", "m5"],
     "mu-6":             ["6_h-h-h_filtered", "m6"],
     # MB
+    "mb-dra1-1":        ["mb-dra1-1", None],
     "mb-bum2-2":        ["mb-bum2-2", "mb33"],
 
 }
@@ -53,6 +55,8 @@ SCENE_NAMES = [s[0] for s in SCENE_ID_ALIASES.values()]
 
 # zb "1_l-l-l_trajectories_2024-05-29_15-27-12"
 DIR_NAME_PATTERN = re.compile(r"^(.+)_trajectories.*")
+# check if a string is a (normal) scene id
+SCENE_ID_PATTERN = re.compile(r"^([a-z][a-z0-9]*\-){1,2}[a-z0-9]+$")
 
 CLASS_COLORS = [
     (0.33, 0.33, 0.33, 1.0),        # other, dark grey
@@ -83,6 +87,9 @@ def parse_full_class_name(cla:str, default=None):
     return default
 
 def scene_name_to_id(scene_name:str):
+    if is_scene_id(scene_name):
+        # is already a scene id
+        return scene_name
     for id,aliases in SCENE_ID_ALIASES.items():
         if scene_name == id or scene_name in aliases:
             return id
@@ -105,6 +112,9 @@ def dir_to_scene_name(trajectory_dir_name:str):
         raise RuntimeError(trajectory_dir_name, " doesnt match pattern!")
     scene_name = matches[0]
     return scene_name
+
+def is_scene_id(s:str):
+    return len(re.findall(SCENE_ID_PATTERN, s)) > 0
 
 # make key (scene_id, instance_id, frag_index).
 # example: "dragonfly/dragonfly_h3_6_5.csv" becomes ("hn-dra-1", 6, 5).
@@ -196,4 +206,16 @@ if __name__ == "__main__":
 
     # show_colors()
 
-    print(read_split_file("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_1/train_test_split_2080.txt"))
+    # print(read_split_file("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_1/train_test_split_2080.txt"))
+
+    l = [
+        "hn-bee-1",
+        "mu-1",
+        "mb-dra1-1",
+        "asd1-23",
+        "aa-bb-aa",
+        "aa-vvv-ee-ww",
+        "123-123-asd"
+    ]
+    for x in l:
+        print(x, is_scene_id(x))

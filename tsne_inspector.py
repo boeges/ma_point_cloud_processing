@@ -127,7 +127,6 @@ class TsneInspector:
         self.df.loc[:,"frag_id"] = self.df.loc[:,'sample_path'].apply(bee.frag_filename_to_id)
         # split up frag_id-tuple into 3 columns
         self.df[['scene_id', 'instance_id', "fragment_index"]] = pd.DataFrame(self.df['frag_id'].tolist(), index=self.df.index)
-        # self.descr_df["scene_id"] = self.descr_df["scene_id"].apply(lambda s: bee.scene_aliases_by_short_id(s)[1])
         # add "target_index" column
         classes_map = dict(zip(bee.CLASSES, range(len(bee.CLASSES))))
         self.df.loc[:,"target_index"] = self.df.loc[:,"target_name"].map(classes_map)

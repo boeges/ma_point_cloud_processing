@@ -182,7 +182,7 @@ if __name__ == "__main__":
     SEGMENTATION_STAGE = "3_classified"
 
     # Paths
-    EVENTS_CSV_DIR = Path("../../aufnahmen/exported_csv/")
+    EVENTS_CSV_DIR = Path("../../aufnahmen/2024-08-06_libellen/exported_csv/") #  2024-07-18_bunter_garten, 2024-08-06_libellen
     EVENTS_CSV_FILENAME = "{filestem}.csv"
 
     LABELS_CSV_DIR = Path("output/video_annotations") / SEGMENTATION_STAGE
@@ -241,7 +241,9 @@ if __name__ == "__main__":
         # "5_h-l-h",
         # "6_h-h-h_filtered",
         # MB
-        "mb-bum2-2",
+        # "mb-bum2-2",
+        # "mb-dra1-1",
+        "mb-dra2-1",
     ]
 
     print("Using t-scale:", T_SCALE)
