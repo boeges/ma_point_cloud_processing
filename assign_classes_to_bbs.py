@@ -32,20 +32,25 @@ if __name__ == "__main__":
 
     # exit()
 
-    # filestems = [
-    #     "1_l-l-l",
-    #     "2_l-h-l",
-    #     "3_m-h-h",
-    #     "4_m-m-h",
-    #     "5_h-l-h",
-    #     "6_h-h-h_filtered",
-    # ]
+    filestems = [
+        # "1_l-l-l",
+        # "2_l-h-l",
+        # "3_m-h-h",
+        # "4_m-m-h",
+        # "5_h-l-h",
+        # "6_h-h-h_filtered",
+        "vieleSchmetterlinge2"
+    ]
 
     for labels_filepath in labels_filepaths:
         filestem = labels_filepath.name.replace(LABELS_CSV_FILENAME.format(filestem=""), "")
 
         classes_filepath = INPUT_CLASSES_DIR / INPUT_CLASSES_FILENAME.format(filestem=filestem)
         output_labels_filepath = OUTPUT_LABELS_DIR / OUTPUT_LABELS_FILENAME.format(filestem=filestem)
+
+        if len(filestems)>0 and filestem not in filestems:
+            print("Skipping file:", labels_filepath.name, "; Not in filestems list!")
+            continue
 
         if not classes_filepath.exists():
             print("Skipping file:", labels_filepath.name, "; Classes file", classes_filepath.name, "does not exist!")

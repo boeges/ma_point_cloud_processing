@@ -6,6 +6,10 @@ from pathlib import Path
 import bee_utils as bee
 import random
 import math
+import pandas as pd
+import numpy as np
+from datetime import datetime
+
 
 
 def create_split(dataset_dir:Path, train_size, max_train_percent=0.5):
@@ -67,7 +71,7 @@ def create_split(dataset_dir:Path, train_size, max_train_percent=0.5):
                 ntrain = ntrain_max
         taken_train = l[:ntrain]
         taken_test = l[ntrain:]
-        print(k, " files:", len(l), " train size:", len(taken_train), " test size", len(taken_test))
+        print(f"{k:>16}, files: {len(l):>4}, train size:{len(taken_train):>4}, test size {len(taken_test):>4}")
 
         ltrain += taken_train
         ltest += taken_test
@@ -94,13 +98,140 @@ def create_split(dataset_dir:Path, train_size, max_train_percent=0.5):
 
 
 
+def create_split2(dataset_dir:Path, train_size, max_train_percent=0.5):
+    """
+    creates a train/test split file as txt.
+
+    Args:
+        dataset_dir (Path): root to dataset
+        train_size (_type_): if float: in percent; if int: absolute size
+        max_train_percent (float, optional): only used if train_size is absolute; Max percentage to take of a class for train split. Defaults to 0.5.
+    """
+
+    if isinstance(train_size, int) or train_size > 1.0:
+        # number of samples in train split is absolute! (K-Shot)
+        train_size = int(train_size)
+        split_str = f"{train_size}shot"
+        is_percentage = False
+    else:
+        is_percentage = True
+        split_str = f"{int(train_size*100):0>2}{int(100-train_size*100):0>2}"
+
+    print("Using", "percentual" if is_percentage else "absolute", "split!")
+    print("split string:", split_str)
+
+    # Find all csv files in CSV_DIR
+    files = list(dataset_dir.glob("*/*.csv"))
+
+    print("found", len(files), "files")
+
+    l = []
+    for f in files:
+        fn = f.name
+        clas = f.parent.name
+        pth = clas+"/"+fn
+        scene_id, traj_index, frag_id = bee.frag_filename_to_id(fn)
+        traj_id = scene_id+"_"+str(traj_index)
+        l.append([scene_id, traj_index, traj_id, frag_id, clas, pth])
+
+    df = pd.DataFrame(l, columns=["scene", "traj_index", "traj_id", "frag", "class", "path"])
+    print(df.head())
+
+    train_indices = []
+    test_indices = []
+
+    for clas in df["class"].unique():
+        class_df = df[df["class"] == clas]
+
+        # Get groups and their sizes
+        group_sizes = class_df.groupby("traj_id").size().reset_index(name='size')
+
+        # Calculate the target number of samples for the train set
+        total_samples = group_sizes['size'].sum()
+        if is_percentage:
+            ntrain = int(math.ceil(total_samples * train_size))
+        else:
+            ntrain_max = int(math.ceil(total_samples * max_train_percent))
+            ntrain = train_size
+            if ntrain > ntrain_max:
+                print("WARNING: ntrain is greater than max train percentage for class", clas, ". Only taking", ntrain_max, "samples!")
+                ntrain = ntrain_max
+
+        ll = []
+        for _ in range(100):
+            # Shuffle groups
+            group_sizes1 = group_sizes.sample(frac=1)
+
+            minus = random.choice([0,1,2,3,4,5])
+            target = ntrain-minus
+            train_inds, test_inds = find_split(class_df, group_sizes1, target)
+            dist = abs(ntrain-len(train_inds))
+            ll.append([train_inds, test_inds, dist])
+
+        # sort by dist
+        ll = sorted(ll, key=lambda v: v[2])
+        train_inds = ll[0][0]
+        test_inds = ll[0][1]
+        print(clas, " total samples:", total_samples, " target:", ntrain, total_samples-ntrain, " split:", len(train_inds), len(test_inds))
+
+        # add to global list
+        train_indices.extend(train_inds)
+        test_indices.extend(test_inds)
+
+    # Split the dataframe into train and test sets based on indices
+    train_df = df.loc[train_indices]
+    test_df = df.loc[test_indices]
+
+    print(train_df.head())
+    print(test_df.head())
+    print(df.index.__len__(), train_df.index.__len__(), test_df.index.__len__())
+
+    # csv format: [train|test], class, file id
+    fo = Path(dataset_dir / f"train_test_split_{split_str}.txt")
+    if fo.exists():
+        dt = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        fo = Path(dataset_dir / f"train_test_split_{split_str}_{dt}.txt")
+        print(fo)
+
+    with open(fo, "w") as file:
+        for _,r in train_df.iterrows():
+            t = "train"
+            fid = "_".join([r["scene"], str(r["traj_index"]), str(r["frag"])])
+            clas = r["class"]
+            # print(f"  {t},{clas},{fid}")
+            file.write(f"{t},{clas},{fid}\n")
+        for _,r in test_df.iterrows():
+            t = "test"
+            fid = "_".join([r["scene"], str(r["traj_index"]), str(r["frag"])])
+            clas = r["class"]
+            # print(f"  {t},{clas},{fid}")
+            file.write(f"{t},{clas},{fid}\n")
+
+
+def find_split(class_df, group_sizes, train_sample_target):
+    for i in range(1,len(group_sizes.index)):
+        # num of items to pick
+        df1 = group_sizes.iloc[:i,:]
+        size = df1['size'].sum()
+        if size >= train_sample_target:
+            train_inds = class_df[class_df["traj_id"].isin(df1["traj_id"])].index
+            test_inds = class_df[~class_df["traj_id"].isin(df1["traj_id"])].index
+            # train_indices.extend(train_inds)
+            # test_indices.extend(test_inds)
+            # print(len(train_inds), len(test_inds))
+            return train_inds, test_inds
+    return [],[]
+
+
 if __name__ == "__main__":
     DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_3")
 
-    # TRAIN_SPLIT = 0.7
-    # TRAIN_SPLIT = 0.2
-    TRAIN_SPLIT = 20
+    TRAIN_SPLIT = 0.7
 
-    create_split(DIR, TRAIN_SPLIT, 0.5)
+    # creates a random split over all fragments
+    # create_split(DIR, TRAIN_SPLIT, 0.5)
+
+    # creates a split by keeping all fragments of a trajectory in the same split
+    create_split2(DIR, TRAIN_SPLIT, 0.5)
 
     

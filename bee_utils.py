@@ -42,6 +42,7 @@ SCENE_ID_ALIASES = {
     "mu-6":             ["6_h-h-h_filtered", "m6"],
     # MB
     "mb-dra1-1":        ["mb-dra1-1", None],
+    "mb-dra2-1":        ["mb-dra1-1", None],
     "mb-bum2-2":        ["mb-bum2-2", "mb33"],
 
 }

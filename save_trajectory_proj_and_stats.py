@@ -139,9 +139,9 @@ if __name__ == "__main__":
     BINS_PER_T_BUCKET = int(T_BUCKET_LENGTH_MS * 2.5) # 250 for 100ms, 10000 for 4000ms
     
     # Save trajectory statistics
-    SAVE_STATISTICS = True
+    SAVE_STATISTICS = False
     # Save images of complete paths
-    SAVE_IMAGES = False
+    SAVE_IMAGES = True
     # Save images of each individual bucket (WARNING: Creates many images)
     SAVE_BUCKET_IMAGES = False
     # BINS_PER_T_BUCKET = T_BUCKET_LENGTH_MS # a bucket for every ms
@@ -161,7 +161,7 @@ if __name__ == "__main__":
 
     # Paths
     TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified")
-    PREDICTION_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-07-03_23-11/logs/pred_per_sample_2024-07-05_12-39.csv")
+    PREDICTION_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/msg_cls4A_e40_bs16_split7030/logs/pred_per_sample_2024-08-07_23-49.csv")
     # tf: timeframe
     FIGURE_OUTPUT_DIR = Path("output/figures/projection_and_hist") / f"tf{T_BUCKET_LENGTH_MS}ms_tbr{BINS_PER_T_BUCKET}{DRAW_PREDICTIONS_STR}{DATETIME_STR_PREFIX}"
     STATS_OUTPUT_DIR = Path("output/statistics/hist/") / f"tf{T_BUCKET_LENGTH_MS}ms_{DATETIME_STR}"
