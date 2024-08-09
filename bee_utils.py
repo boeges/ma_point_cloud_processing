@@ -4,6 +4,30 @@ import re
 import pandas as pd
 from matplotlib import colors
 from datetime import datetime
+import logging
+from pathlib import Path
+
+
+def Logger(log_file_dir):
+  log_file_dir = Path(log_file_dir)
+  log_file_dir.mkdir(parents=True, exist_ok=True)
+  log_file_path = log_file_dir / (get_date_time_str() + ".log")
+  
+  # Format
+  logging.basicConfig(format="%(asctime)s [%(levelname)-5.5s]  %(message)s")
+  logFormatter = logging.Formatter("%(asctime)s [%(levelname)-5.5s]  %(message)s")
+
+  logg = logging.getLogger(__name__)
+  logg.setLevel(logging.DEBUG)
+
+  # Log to file (will also log to console)
+  fileHandler = logging.FileHandler(log_file_path)
+  fileHandler.setFormatter(logFormatter)
+  logg.addHandler(fileHandler)
+
+  return logg
+
+
 
 # First in tuple MUST be 3-character abbreviation!
 CLASS_ABBREVIATIONS = {
@@ -139,6 +163,23 @@ def frag_filename_to_id(filename) -> tuple:
 def id_tuple_to_str(id:tuple) -> str:
     return f"{id[0]}_{id[1]}_{id[2]}"
 
+def frag_filename_to_id_str(fn):
+    """
+    extracts fragment id string from filename or path string.
+
+    Examples:
+    "hn-bee-1_0_17.csv" -> "hn-bee-1_0_17"\n
+    "bee/hn-bee-1_0_17.csv" -> "hn-bee-1_0_17"\n
+    "bee\\hn-bee-1_0_17.csv" -> "hn-bee-1_0_17"\n
+
+    Args:
+        fn (function): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    return "_".join(fn.split("/")[-1].split("\\")[-1].replace(".csv","").split("_")[-3:])
+
 def get_rgba_of_class_index(class_index, alpha=1.0):
     if isinstance(class_index, pd.Series):
         # convert whole series (pd.Series)
@@ -209,14 +250,5 @@ if __name__ == "__main__":
 
     # print(read_split_file("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_1/train_test_split_2080.txt"))
 
-    l = [
-        "hn-bee-1",
-        "mu-1",
-        "mb-dra1-1",
-        "asd1-23",
-        "aa-bb-aa",
-        "aa-vvv-ee-ww",
-        "123-123-asd"
-    ]
-    for x in l:
-        print(x, is_scene_id(x))
+    for k,v in SCENE_SHORT_ID_ALIASES.items():
+        print(k, v)

@@ -104,7 +104,7 @@ if __name__ == "__main__":
     T_BUCKET_LENGTH_MS = int(T_BUCKET_LENGTH / TIMESTEPS_PER_SECOND * 1000)
     # This is our target event count per fragment; Use "all" to keep original event count
     # EVENTS_PER_FRAGMENT = "all"
-    EVENTS_PER_FRAGMENT = 4096
+    EVENTS_PER_FRAGMENT = 2048
     # Min number of events a fragment needs before adding or removing events
     MIN_EVENTS_COUNT = EVENTS_PER_FRAGMENT//2
 
@@ -122,8 +122,7 @@ if __name__ == "__main__":
 
     ### Paths
     # TRAJECTORIES_CSV_DIR = Path("output/extracted_trajectories/2_separated_mu")
-    # TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified")
-    TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified_2024-08-07_15-27-15")
+    TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified")
     OUTPUT_DATASET_DIR = Path("../../datasets/insect/") / \
         f"{T_BUCKET_LENGTH_MS}ms_{EVENTS_PER_FRAGMENT}pts_{MIN_EVENTS_COUNT}minpts"\
         f"_{DOWNSAMPLE_METHOD_STR}-ds_{NOISE_REDUCTION_METHOD}-nr"\
@@ -378,8 +377,10 @@ if __name__ == "__main__":
                 columns=["scene", "instance_id", "fragment_id", "class", "traj_event_count", "traj_start_ts", \
                             "orig_event_count", "nr_event_count", "sampled_event_count"])
         fragments_df.to_csv(LOG_DIR/"fragments.csv", index=False, header=True, decimal='.', sep=',', float_format='%.3f')
+        print("Saved stats to", LOG_DIR/"fragments.csv")
         if OUTPUT_DIR_MODE == "dataset_dir":
             fragments_df.to_csv(OUTPUT_DATASET_DIR/"fragments.csv", index=False, header=True, decimal='.', sep=',', float_format='%.3f')
+            print("Saved stats to", OUTPUT_DATASET_DIR/"fragments.csv")
 
     print("Finished!")
 

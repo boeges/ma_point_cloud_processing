@@ -224,14 +224,13 @@ def find_split(class_df, group_sizes, train_sample_target):
 
 
 if __name__ == "__main__":
-    DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_3")
-
-    TRAIN_SPLIT = 0.7
+    DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4")
 
     # creates a random split over all fragments
-    # create_split(DIR, TRAIN_SPLIT, 0.5)
+    # create_split(DIR, 40, 0.5)
 
     # creates a split by keeping all fragments of a trajectory in the same split
-    create_split2(DIR, TRAIN_SPLIT, 0.5)
+    create_split2(DIR, 0.7, 0.5)
+    create_split2(DIR, 40, 0.5)
 
     
