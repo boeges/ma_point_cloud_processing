@@ -208,18 +208,17 @@ def create_split2(dataset_dir:Path, train_size, max_train_percent=0.5):
             file.write(f"{t},{clas},{fid}\n")
 
 
-def find_split(class_df, group_sizes, train_sample_target):
-    for i in range(1,len(group_sizes.index)):
-        # num of items to pick
-        df1 = group_sizes.iloc[:i,:]
-        size = df1['size'].sum()
-        if size >= train_sample_target:
-            train_inds = class_df[class_df["traj_id"].isin(df1["traj_id"])].index
-            test_inds = class_df[~class_df["traj_id"].isin(df1["traj_id"])].index
-            # train_indices.extend(train_inds)
-            # test_indices.extend(test_inds)
-            # print(len(train_inds), len(test_inds))
-            return train_inds, test_inds
+def find_split(samples, frags_per_instance, ntrain):
+    for n in range(1,len(frags_per_instance.index)):
+        # Take first n fragments from instance
+        selection = frags_per_instance.iloc[:n,:]
+        frag_count = selection['size'].sum()
+        if frag_count >= ntrain:
+            # Take all fragments from these instances
+            train = samples[samples["instance_id"].isin(selection["instance_id"])].index
+            # Take all fragments that are NOT from these instances
+            test = samples[~samples["instance_id"].isin(selection["instance_id"])].index
+            return train, test
     return [],[]
 
 
