@@ -31,20 +31,23 @@ T_BUCKET_LENGTH = 1000 * 100 # 100ms
 # ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/msg_cls6B_e40_bs8_split2080/logs/activations_per_sample_2024-08-03_22-37.csv")
 # ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/msg_cls4A_e40_bs8_split7030_3/logs/activations_per_sample_2024-08-09_09-27.csv")
 # ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/msg_cls4A_e40_bs8_split20shot_3/logs/activations_per_sample_2024-08-09_11-36.csv")
-ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/msg_cls4A_e40_bs8_split40shot_3/logs/activations_per_sample_2024-08-09_19-50.csv")
+# ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/msg_cls4A_e40_bs8_split40shot_3/logs/activations_per_sample_2024-08-09_19-50.csv")
+ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/msg_cls4A_e40_bs8_pts4096_split40shot_4/logs/activations_per_sample_2024-08-12_12-26.csv")
 # ACTIVATIONS_FILE = Path("../foldingnet2/snapshot/Reconstruct_insect_foldnet_gaussian_k20_e1600/features/activations_per_sample_2024-07-30_18-04.csv")
 # ACTIVATIONS_FILE = Path("../foldingnet2/snapshot/Reconstruct_insect_foldnet_gaussian_k20_e2000_feat512_pts4096_augment/features/activations_per_sample_2024-08-03_22-16.csv")
-# ACTIVATIONS_FILE = Path("../foldingnet2/snapshot/Reconstruct_insect_foldnet_gaussian_k40_e1600_feat1024_pts4096_augment/features/activations_per_sample_2024-08-04_12-14.csv")
-DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_3")
+# ACTIVATIONS_FILE = Path("../foldingnet2/snapshot/Reconstruct_insect_foldnet_gaussian_k40_e1600_feat1024_pts4096_augment_3/features/activations_per_sample_2024-08-09_16-49.csv")
+# DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_3")
+DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4")
 # DATASET_DIR = Path("../../datasets/insect/100ms_2048pts_fps-ds_sor-nr_norm_shufflet_1")
-DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_3/train_test_split_40shot_1.txt")
+# DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_3/train_test_split_40shot_1.txt")
+DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4/train_test_split_40shot.txt")
 # Contains exported 2d projections
 FIGURES_DIR = Path("output/figures/projection_and_hist/tf100ms_tbr250_2024-08-07_23-58-41")
 # Labels mapping file will be exported to this dir
 LABELS_OUTPUT_DIR = Path("output/instance_classes/tsne_inspector")
 # Dir with bbox annotations; Existing files will be overwritten!
 ANNOTATIONS_DIR = Path("output/video_annotations/3_classified")
-SHOW_TEST_AS_UNLABELED = True
+SHOW_TEST_AS_UNLABELED = False
 GROUP_TO_TRAJECORIES = True # true: Points are whole trajectories; false: Points are fragments
 
 
