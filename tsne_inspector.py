@@ -25,22 +25,36 @@ T_BUCKET_LENGTH = 1000 * 100 # 100ms
 # Which samples of the dataset to show; "all", "train" or "test";
 # Irrelevant for Autoencoder since its trained on all samples
 
-# ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-07-03_23-11/logs/activations_per_class_2024-07-23_12-30_with_bum.csv")
-# ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/2024-07-25_22-10/logs/activations_per_class_2024-07-25_22-58.csv")
-# ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/msg_cls6B_e40_bs8_split7030/logs/activations_per_sample_2024-08-03_22-36.csv")
-# ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/msg_cls6B_e40_bs8_split2080/logs/activations_per_sample_2024-08-03_22-37.csv")
-# ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/msg_cls4A_e40_bs8_split7030_3/logs/activations_per_sample_2024-08-09_09-27.csv")
-# ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/msg_cls4A_e40_bs8_split20shot_3/logs/activations_per_sample_2024-08-09_11-36.csv")
-# ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/msg_cls4A_e40_bs8_split40shot_3/logs/activations_per_sample_2024-08-09_19-50.csv")
-ACTIVATIONS_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/msg_cls4A_e40_bs8_pts4096_split40shot_4/logs/activations_per_sample_2024-08-12_12-26.csv")
-# ACTIVATIONS_FILE = Path("../foldingnet2/snapshot/Reconstruct_insect_foldnet_gaussian_k20_e1600/features/activations_per_sample_2024-07-30_18-04.csv")
-# ACTIVATIONS_FILE = Path("../foldingnet2/snapshot/Reconstruct_insect_foldnet_gaussian_k20_e2000_feat512_pts4096_augment/features/activations_per_sample_2024-08-03_22-16.csv")
-# ACTIVATIONS_FILE = Path("../foldingnet2/snapshot/Reconstruct_insect_foldnet_gaussian_k40_e1600_feat1024_pts4096_augment_3/features/activations_per_sample_2024-08-09_16-49.csv")
+ACTIVATIONS_DIR_PN = Path("../Pointnet_Pointnet2_pytorch/log/classification/")
+ACTIVATIONS_DIR_FN = Path("../foldingnet2/snapshot/")
+
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "2024-07-03_23-11/logs/activations_per_class_2024-07-23_12-30_with_bum.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "2024-07-25_22-10/logs/activations_per_class_2024-07-25_22-58.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls6B_e40_bs8_split7030/logs/activations_per_sample_2024-08-03_22-36.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls6B_e40_bs8_split2080/logs/activations_per_sample_2024-08-03_22-37.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls4A_e40_bs8_split7030_3/logs/activations_per_sample_2024-08-09_09-27.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls4A_e40_bs8_split20shot_3/logs/activations_per_sample_2024-08-09_11-36.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls4A_e40_bs8_split40shot_3/logs/activations_per_sample_2024-08-09_19-50.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls4A_e40_bs8_pts4096_split40shot_4/logs/activations_per_sample_2024-08-12_12-26.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls4A_e40_bs8_pts4096_split40shot_4/logs/activations_per_sample_2024-08-14_18-44.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls4A_e40_bs8_pts4096_split7030_ds4/logs/activations_per_sample_2024-08-14_19-31.csv"
+ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split7030_ds4//logs/activations_per_sample_ds4.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split7030_ds4/logs/activations_per_sample_ds4_w_depth.csv"
+
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_FN / "Reconstruct_insect_foldnet_gaussian_k20_e1600/features/activations_per_sample_2024-07-30_18-04.csv")
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_FN / "Reconstruct_insect_foldnet_gaussian_k20_e2000_feat512_pts4096_augment/features/activations_per_sample_2024-08-03_22-16.csv")
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_FN / "Reconstruct_insect_foldnet_gaussian_k40_e1600_feat1024_pts4096_augment_3/features/activations_per_sample_2024-08-09_16-49.csv")
+
 # DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_3")
-DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4")
+# DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4")
+DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4_w_depth")
 # DATASET_DIR = Path("../../datasets/insect/100ms_2048pts_fps-ds_sor-nr_norm_shufflet_1")
+
+# DATASET_SPLIT_FILE = None
 # DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_3/train_test_split_40shot_1.txt")
-DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4/train_test_split_40shot.txt")
+# DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4/train_test_split_40shot.txt")
+DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4/train_test_split_7030.txt")
+
 # Contains exported 2d projections
 FIGURES_DIR = Path("output/figures/projection_and_hist/tf100ms_tbr250_2024-08-07_23-58-41")
 # Labels mapping file will be exported to this dir
@@ -48,7 +62,7 @@ LABELS_OUTPUT_DIR = Path("output/instance_classes/tsne_inspector")
 # Dir with bbox annotations; Existing files will be overwritten!
 ANNOTATIONS_DIR = Path("output/video_annotations/3_classified")
 SHOW_TEST_AS_UNLABELED = False
-GROUP_TO_TRAJECORIES = True # true: Points are whole trajectories; false: Points are fragments
+GROUP_TO_TRAJECORIES = True # True: Points are whole trajectories; false: Points are fragments
 
 
 def get_projected_heatmap(df, col1, col2, bins_x, bins_y):
@@ -120,6 +134,10 @@ class TsneInspector:
         self.create_figure()
         self.create_ui()
 
+        # test
+        # ind = self.df[self.df["sample_path"].str.contains("hn-depth-1")].index
+        # self.select(ind)
+
 
     def create_dfs(self):
         # load activations file
@@ -141,7 +159,7 @@ class TsneInspector:
         if self.split_file is not None:
             # find out split ("train"/"test") of each fragment
             # fid example: "hn-dra-1_16_6"
-            train_fids, test_fids = bee.read_split_file(DATASET_SPLIT_FILE)
+            train_fids, test_fids = bee.read_split_file(self.split_file)
             df["split"] = df["frag_id"].apply(lambda frag_tuple: self.apply_split(frag_tuple, train_fids, test_fids))
         else:
             df["split"] = ""
@@ -190,6 +208,11 @@ class TsneInspector:
             print(df.head())
 
         self.full_df = df
+
+        # Find usd classes
+        df_classes = self.full_df["orig_target_name"].unique()
+        self.used_classes = [cl for cl in bee.CLASSES if cl in df_classes] # to keep order
+
 
         # if self.split != "all":
         #     self.df = self.df.drop(self.df[self.df["split"] != self.split].index)
@@ -243,6 +266,8 @@ class TsneInspector:
         # create legend
         legend_handles = []
         for i,cla in enumerate(bee.CLASSES):
+            if cla not in self.used_classes:
+                continue
             clr = bee.get_rgba_of_class_index(i, 0.66)
             h = mpatches.Patch(color=clr, label=cla)
             legend_handles.append(h)
@@ -268,7 +293,7 @@ class TsneInspector:
 
         canvas = FigureCanvasTkAgg(fig, master=frame_left)
         canvas.draw()
-        canvas.mpl_connect("key_press_event", lambda event: print(f"you pressed {event.key}"))
+        # canvas.mpl_connect("key_press_event", lambda event: print(f"you pressed {event.key}"))
         canvas.mpl_connect("key_press_event", key_press_handler)
         canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
 
@@ -283,7 +308,7 @@ class TsneInspector:
         frame_right.pack(fill=tk.BOTH, side=tk.RIGHT, expand=True)
 
         # This label sets the width for the right frame!
-        tk.Label(frame_right, text="Selected:", width=30, pady=5, anchor="w", font=("Consolas", 11) )\
+        tk.Label(frame_right, text="Last selected point:", width=30, pady=5, anchor="w", font=("Consolas", 11) )\
             .pack(side=tk.TOP, fill=tk.X)
 
         self.scene_id_var = tk.StringVar()
@@ -327,6 +352,11 @@ class TsneInspector:
                                 command=lambda: self.rbs_split_value_change(rb), font=("Consolas", 10))
             rb.pack(side=tk.TOP, fill=tk.X)
             self.rbs_split.append(rb)
+
+        # self.add_to_sel_var = tk.BooleanVar(master=root, value=False)
+        # self. tk.Checkbutton(frame_right, text="Zu Auswahl hinzufügen", variable=self.add_to_sel_var, value=False, anchor="w", \
+        #                         font=("Consolas", 10))
+        # rb.pack(side=tk.TOP, fill=tk.X)
 
         button_unselect = tk.Button(master=frame_right, text="Unselect all", width=20, command=self.unselect_all)
         button_unselect.pack(side=tk.TOP, padx=10, pady=5, fill=tk.X)
@@ -382,9 +412,21 @@ class TsneInspector:
     def unselect_all(self):
         self.select(np.array([], dtype=int))
 
-    def select(self, selected_ind):
-        prev_selected_ind = self.selected_ind
-        self.selected_ind = selected_ind
+    def select(self, selected_ind, sel_mode="select"):
+        if sel_mode=="select":
+            # Only select this!
+            prev_selected_ind = self.selected_ind
+            self.selected_ind = selected_ind
+        elif sel_mode=="add":
+            # add to selection
+            prev_selected_ind = np.array([], dtype=int)
+            self.selected_ind = np.concatenate([self.selected_ind, selected_ind])
+            self.selected_ind = np.unique(self.selected_ind)
+        elif sel_mode=="remove":
+            # remove from selection
+            prev_selected_ind = selected_ind
+            mask = np.isin(self.selected_ind, selected_ind)
+            self.selected_ind = self.selected_ind[~mask]
 
         # How many points are selectd?
         if len(selected_ind) == 0:
@@ -402,7 +444,7 @@ class TsneInspector:
 
         # Set border color to black
         self.ec[prev_selected_ind] = self.fc[prev_selected_ind]
-        self.ec[selected_ind] = (0.0,0.0,0.0,1.0)
+        self.ec[self.selected_ind] = (0.0,0.0,0.0,1.0)
         self.scatter.set_edgecolor(self.ec)
 
         # Set border width
@@ -410,7 +452,7 @@ class TsneInspector:
         # self.lw[selected_ind] = 2.0
         # self.scatter.set_linewidth(self.lw)
 
-        self.update_class_radiobuttons(selected_ind)
+        self.update_class_radiobuttons(self.selected_ind)
         self.fig.canvas.draw_idle()
 
     def select_all_frags_of_selected_instance(self):
@@ -516,11 +558,21 @@ class TsneInspector:
 
 
     def on_pick(self, event):
+        # print('you pressed', event.mouseevent.button, event.mouseevent.key, event.mouseevent.dblclick)
+
         if event.artist != self.scatter:
             return
         if len(event.ind) == 0:
             return
         
+
+        if event.mouseevent.key == "shift" and event.mouseevent.button == matplotlib.backend_bases.MouseButton.LEFT:
+            sel_mode = "add"
+        elif event.mouseevent.key == "shift" and event.mouseevent.button == matplotlib.backend_bases.MouseButton.RIGHT:
+            sel_mode = "remove"
+        else:
+            sel_mode = "select"
+            
         # find closest point to cursor
         x = event.mouseevent.xdata
         y = event.mouseevent.ydata
@@ -530,7 +582,7 @@ class TsneInspector:
         closest_index = event.ind[indmin]
 
         # select point
-        self.select(np.array([closest_index]))
+        self.select(np.array([closest_index]), sel_mode=sel_mode)
 
 
     def on_lasso(self, verts):

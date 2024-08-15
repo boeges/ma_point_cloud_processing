@@ -57,6 +57,7 @@ SCENE_ID_ALIASES = {
     "hn-was-1":         ["wespen1", "h8"],
     "hn-was-2":         ["wespen2", "h9"],
     "hn-was-3":         ["wespen3", "h10"],
+    "hn-depth-1":       ["hn-depth-1", None],
     # Muenster
     "mu-1":             ["1_l-l-l", "m1"],
     "mu-2":             ["2_l-h-l", "m2"],

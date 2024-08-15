@@ -104,7 +104,7 @@ if __name__ == "__main__":
     T_BUCKET_LENGTH_MS = int(T_BUCKET_LENGTH / TIMESTEPS_PER_SECOND * 1000)
     # This is our target event count per fragment; Use "all" to keep original event count
     # EVENTS_PER_FRAGMENT = "all"
-    EVENTS_PER_FRAGMENT = 2048
+    EVENTS_PER_FRAGMENT = 4096
     # Min number of events a fragment needs before adding or removing events
     MIN_EVENTS_COUNT = EVENTS_PER_FRAGMENT//2
 
@@ -160,6 +160,9 @@ if __name__ == "__main__":
 
     # Find all trajectory dirs
     trajectory_dirs = [d for d in TRAJECTORIES_BASE_DIR.glob("*_trajectories*")]
+
+    # FOR TESTING!
+    # trajectory_dirs = [d for d in TRAJECTORIES_BASE_DIR.glob("hn-depth-1_trajectories")]
 
     fragments_stats = []
 
