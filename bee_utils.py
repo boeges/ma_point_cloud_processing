@@ -58,6 +58,7 @@ SCENE_ID_ALIASES = {
     "hn-was-2":         ["wespen2", "h9"],
     "hn-was-3":         ["wespen3", "h10"],
     "hn-depth-1":       ["hn-depth-1", None],
+    "hn-depth-2":       ["hn-depth-2", None],
     # Muenster
     "mu-1":             ["1_l-l-l", "m1"],
     "mu-2":             ["2_l-h-l", "m2"],
@@ -95,6 +96,8 @@ CLASS_COLORS = [
     (0.30, 0.68, 0.29, 1.0),        # nothing yet, green
     (0.96, 0.50, 0.74, 1.0),        # nothing yet, pink
 ]
+
+CLASS_COLORS_BY_NAME = {k:CLASS_COLORS[i] for i,k in enumerate(CLASS_ABBREVIATIONS.keys())}
 
 CLASS_CMAP = colors.ListedColormap(CLASS_COLORS)
 
@@ -189,6 +192,14 @@ def get_rgba_of_class_index(class_index, alpha=1.0):
     clr = CLASS_COLORS[int(class_index)]
     return tuple([*clr[:3]]+[alpha])
     
+def get_rgba_of_class_name(class_name, alpha=1.0):
+    if isinstance(class_name, pd.Series):
+        # convert whole series (pd.Series)
+        return class_name.apply(lambda v: get_rgba_of_class_name(v, alpha))
+    # cnvert single int
+    clr = CLASS_COLORS_BY_NAME[class_name]
+    return tuple([*clr[:3]]+[alpha])
+    
 
 def show_colors():
     import matplotlib as mpl
@@ -252,4 +263,9 @@ if __name__ == "__main__":
     # print(read_split_file("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_1/train_test_split_2080.txt"))
 
     for k,v in SCENE_SHORT_ID_ALIASES.items():
+        print(k, v)
+
+    print()
+
+    for k,v in CLASS_COLORS_BY_NAME.items():
         print(k, v)
