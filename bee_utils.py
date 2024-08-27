@@ -6,6 +6,7 @@ from matplotlib import colors
 from datetime import datetime
 import logging
 from pathlib import Path
+import colorsys
 
 
 def Logger(log_file_dir):
@@ -184,21 +185,34 @@ def frag_filename_to_id_str(fn):
     """
     return "_".join(fn.split("/")[-1].split("\\")[-1].replace(".csv","").split("_")[-3:])
 
-def get_rgba_of_class_index(class_index, alpha=1.0):
-    if isinstance(class_index, pd.Series):
-        # convert whole series (pd.Series)
-        return class_index.apply(lambda v: get_rgba_of_class_index(v, alpha))
-    # cnvert single int
-    clr = CLASS_COLORS[int(class_index)]
-    return tuple([*clr[:3]]+[alpha])
-    
+
+def get_rgba_of_class_name_df(class_name_and_conf):
+    """
+    dataframe with two columns; First class names, second confidence [0,1]
+    """
+    # convert whole series (pd.Series)
+    return class_name_and_conf.apply(lambda v: get_rgba_of_class_name(v.iloc[0], v.iloc[1]), axis=1)
+
 def get_rgba_of_class_name(class_name, alpha=1.0):
-    if isinstance(class_name, pd.Series):
-        # convert whole series (pd.Series)
-        return class_name.apply(lambda v: get_rgba_of_class_name(v, alpha))
-    # cnvert single int
-    clr = CLASS_COLORS_BY_NAME[class_name]
-    return tuple([*clr[:3]]+[alpha])
+    # cnvert single row
+    rgb = CLASS_COLORS_BY_NAME[class_name][0:3] # returns rgba, get only rgb
+    return tuple(list(rgb)+[alpha])
+    
+def get_rgba_of_class_name_sat_df(class_name_and_conf, alpha=1.0):
+    """
+    dataframe with two columns; First class names, second confidence [0,1]
+    """
+    # convert whole series (pd.Series)
+    return class_name_and_conf.apply(lambda v: get_rgba_of_class_name_sat(v.iloc[0], v.iloc[1], alpha), axis=1)
+
+def get_rgba_of_class_name_sat(class_name, sat=1.0, alpha=1.0):
+    # set saturation
+    # cnvert single row
+    rgb = CLASS_COLORS_BY_NAME[class_name][0:3] # returns rgba, get only rgb
+    if sat < 1.0:
+        hls = list(colorsys.rgb_to_hls(rgb[0], rgb[1], rgb[2]))
+        rgb = colorsys.hls_to_rgb(hls[0], hls[1], hls[2]*sat)
+    return tuple(list(rgb)+[alpha])
     
 
 def show_colors():
@@ -269,3 +283,18 @@ if __name__ == "__main__":
 
     for k,v in CLASS_COLORS_BY_NAME.items():
         print(k, v)
+
+
+    print("""
+      .-.         .--''-.
+    .'   '.     /'       `.
+    '.     '. ,'          |
+ o    '.o   ,'        _.-'
+  \.--./'. /.:. :._:.'
+ .'    '._-': ': ': ': ':
+:(#) (#) :  ': ': ': ': ':>-
+ ' ____ .'_.:' :' :' :' :'
+  '\__/'/ | | :' :' :'
+        \  \ \
+        '  ' '
+          """)

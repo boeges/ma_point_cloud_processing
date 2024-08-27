@@ -104,12 +104,12 @@ if __name__ == "__main__":
     T_BUCKET_LENGTH_MS = int(T_BUCKET_LENGTH / TIMESTEPS_PER_SECOND * 1000)
     # This is our target event count per fragment; Use "all" to keep original event count
     # EVENTS_PER_FRAGMENT = "all"
-    EVENTS_PER_FRAGMENT = 4096
+    EVENTS_PER_FRAGMENT = "all"
     # Min number of events a fragment needs before adding or removing events
-    MIN_EVENTS_COUNT = EVENTS_PER_FRAGMENT//2
+    MIN_EVENTS_COUNT = 2048
 
-    DOWNSAMPLE_METHOD = "farthest_point" # "random", "farthest_point"
-    DOWNSAMPLE_METHOD_STR = "fps" if "farthest_point" else ("rnd" if "random" else "no")
+    DOWNSAMPLE_METHOD = "random" # "random", "farthest_point"
+    DOWNSAMPLE_METHOD_STR = "fps" if DOWNSAMPLE_METHOD=="farthest_point" else ("rnd" if DOWNSAMPLE_METHOD=="random" else "no")
 
     NOISE_REDUCTION_METHOD = "sor" # "none", "sor" = statistical outlier removal
 
@@ -268,10 +268,11 @@ if __name__ == "__main__":
                     fragment.events_df = fragment.events_df.loc[fragment.events_df["bb_corner_index"].astype(int) == -1]
                     fragment.original_event_count -= len(bb_events_df.index)
                 
+                fragment.events_df = fragment.events_df[["x","y","t"]]
+
                 # Add or remove points by sampling to get exactly EVENTS_PER_FRAGMENT points
                 if EVENTS_PER_FRAGMENT != "all":
                     # Create open3d point cloud
-                    fragment.events_df = fragment.events_df[["x","y","t"]]
                     xyz = fragment.events_df.to_numpy(dtype=np.float32)
                     pcd = o3d.geometry.PointCloud()
                     pcd.points = o3d.utility.Vector3dVector(xyz)
@@ -343,7 +344,7 @@ if __name__ == "__main__":
                 print(f"│ ├─ Fragment {fragment.index}: orig_evts={fragment.original_event_count} "\
                       + f"nr_evt_count={fragment.noise_reduced_event_count} sampled_evt_count={fragment.sampled_event_count}")
                 
-                if fragment.sampled_event_count != EVENTS_PER_FRAGMENT:
+                if EVENTS_PER_FRAGMENT != "all" and fragment.sampled_event_count != EVENTS_PER_FRAGMENT:
                     raise RuntimeError("original_event_count != EVENTS_PER_FRAGMENT")
                 
             print(f"│ └─ Trajectory {instance_id}: orig_fragments={orig_fragment_count} remaining_fragments={len(fragments)} "\
