@@ -392,6 +392,7 @@ class TsneInspector:
     def show(self):
         tk.mainloop()
 
+
     def get_df(self):
         return self.df
         # if self.split == "train" or self.split == "test":
@@ -412,14 +413,56 @@ class TsneInspector:
         self.update_colors()
         self.fig.canvas.draw_idle()
 
+
+    def update_colors(self, color_feature="class"):
+        df = self.get_df()
+        if len(df.index) == 0:
+            print("WARNING: No samples to update colors")
+            return
+
+        if color_feature == "class":
+            max_preds = df.apply(lambda r: r[self.class_cols].max(), axis=1).to_numpy()
+            max_preds = np.maximum(0.1, (1 - (max_preds * -1)))
+            max_preds = pd.Series(max_preds)
+            class_pred_df = pd.concat([df.loc[:,self.col_used_for_colors], max_preds], axis=1)
+            # face colors
+            # array of tuple to 2d-array
+            self.fc = np.array([ *( bee.get_rgba_of_class_name_df(class_pred_df).to_numpy() ) ])
+            self.fc[:,3] = max_preds[:]
+            self.scatter.set_facecolor(self.fc)
+            
+        if color_feature == "scene":
+            cmap = plt.cm.get_cmap('tab20')
+            scene_ids = df["scene_id"].unique()
+            n = len(scene_ids)
+            sindexes = {sid:i for i,sid in enumerate(scene_ids)}
+            s_ind_df = df["scene_id"].map(sindexes)
+            colors = s_ind_df.apply(lambda i: cmap(i/19))
+            colors = colors.to_numpy()
+            colors = np.array([ *colors ])
+            # face colors
+            self.fc = colors
+            # self.fc[:,3] = 1.0
+            self.scatter.set_facecolor(self.fc)
+
+        # edge colors
+        self.ec = self.fc.copy()
+        self.ec[:,:] = 0.0 # set rgba to 0 (transparent)
+        self.ec[self.selected_ind] = (0,0,0,1)
+        self.scatter.set_edgecolor(self.ec)
+
+
     def get_figure(self):
         return self.fig
+
 
     def show_figure(self):
         self.fig.show()
 
+
     def unselect_all(self):
         self.select(np.array([], dtype=int))
+
 
     def select(self, selected_ind, sel_mode="select"):
         # selected_ind are new selected points
@@ -464,6 +507,7 @@ class TsneInspector:
         self.update_class_radiobuttons(self.selected_ind)
         self.fig.canvas.draw_idle()
 
+
     def select_all_frags_of_selected_instance(self):
         """
         Select all fragments (points) of currently selected instance (or of multiple instances).
@@ -472,6 +516,7 @@ class TsneInspector:
         selected_instances = self.get_df().loc[self.selected_ind, ["scene_id", "instance_id"]]
         self.select_all_frags_of_instance(selected_instances)
 
+
     def select_all_frags_of_instance(self, scene_and_instance_ids:pd.DataFrame):
         """
         Args:
@@ -479,6 +524,7 @@ class TsneInspector:
         """
         frag_inds = self.get_all_frags_of_instance(scene_and_instance_ids)
         self.select(frag_inds)
+
 
     def get_all_frags_of_instance(self, scene_and_instance_ids:pd.DataFrame, return_list=True):
         """
@@ -503,6 +549,7 @@ class TsneInspector:
             frag_inds = frag_inds[frag_inds]
             frag_inds = frag_inds.index[frag_inds == True].tolist()
         return frag_inds
+
 
     def update_selection_labels(self, selected_inds=None):
         if selected_inds is None or len(selected_inds) == 0:
@@ -595,24 +642,6 @@ class TsneInspector:
         
         self.update_colors()
         self.fig.canvas.draw_idle()
-
-
-    def update_colors(self):
-        max_preds = self.get_df().apply(lambda r: r[self.class_cols].max(), axis=1).to_numpy()
-        max_preds = np.maximum(0.1, (1 - (max_preds * -1)))
-        if len(max_preds) > 0:
-            max_preds = pd.Series(max_preds)
-            class_pred_df = pd.concat([self.get_df().loc[:,self.col_used_for_colors], max_preds], axis=1)
-            # face colors
-            # array of tuple to 2d-array
-            self.fc = np.array([ *( bee.get_rgba_of_class_name_df(class_pred_df).to_numpy() ) ])
-            self.fc[:,3] = max_preds[:]
-            self.scatter.set_facecolor(self.fc)
-            # edge colors
-            self.ec = self.fc.copy()
-            self.ec[:,:] = 0.0 # set rgba to 0 (transparent)
-            self.ec[self.selected_ind] = (0,0,0,1)
-            self.scatter.set_edgecolor(self.ec)
 
 
     def on_pick(self, event):

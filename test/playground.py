@@ -1,5 +1,16 @@
 
 
+import matplotlib as plt
+
+cmap = plt.cm.get_cmap('tab20')
+
+color_1 = cmap(0/19)
+
+print(color_1)
+
+
+
+
 l = (1,2,3)
 m = [4,5,6]
 n = [*l, *m]
