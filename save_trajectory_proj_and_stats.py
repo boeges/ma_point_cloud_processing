@@ -42,14 +42,6 @@ def event_count_to_color(count, good_count):
         return "orange"
     return "tomato"
 
-# Return bbox indices of bbox around all non zero values
-def arg_bbox(img):
-    rows = np.any(img, axis=1)
-    cols = np.any(img, axis=0)
-    ymin, ymax = np.nonzero(rows)[0][[0, -1]]
-    xmin, xmax = np.nonzero(cols)[0][[0, -1]]
-    return ymin, ymax+1, xmin, xmax+1
-
 # Because cv2.imwrite doe not support umlauts (ä,ü,ö) 
 def cv2_imwrite(path, image):
     _, im_buf_arr = cv2.imencode(".png", image)
@@ -89,6 +81,13 @@ def draw_t_ticks_into_image(image, pixel_distance, predicitons=None, classes=Non
 
     return image
 
+# Return bbox indices of bbox around all non zero values
+def arg_bbox(img):
+    rows = np.any(img, axis=1)
+    cols = np.any(img, axis=0)
+    ymin, ymax = np.nonzero(rows)[0][[0, -1]]
+    xmin, xmax = np.nonzero(cols)[0][[0, -1]]
+    return ymin, ymax+1, xmin, xmax+1
 
 def y_crop_to_used_area(image, padding=0):
     image_height = image.shape[0]
@@ -96,6 +95,45 @@ def y_crop_to_used_area(image, padding=0):
     ymin = max(0, ymin-padding)
     ymax = min(image_height-1, ymax+padding)
     return image[ymin:ymax,:]
+
+
+def calc_std_per_frag(df:pd.DataFrame, agg_type="min") -> pd.Series:
+    """
+    Calculate std of parts of a fragment, then take avg per fragment.
+
+    Args:
+        df (pd.DataFrame): df
+        agg_type (str, optional): min or mean. Defaults to "min".
+
+    Returns:
+        pd.Series: Series with Std per Fragment
+    """
+
+    agg = {
+        "x":"std",
+        "y":"std",
+    }
+
+    df1 = df.groupby([df.fragment_index, df.stat_bucket]).agg(agg)
+
+    # df1["std"] = df1[["x","y"]].sum(axis=1, min_count=1)
+    df1["std"] = df1[["x","y"]].mean(axis=1)
+    df1["std"].fillna(0.0, inplace=True)
+    # df1["std"] = df1[["x","y"]].max(axis=1)
+
+    agg1 = {
+        "std":agg_type,
+    }
+
+    df1 = df1.groupby(level=0).agg(agg1)
+    # df1.columns = df1.columns.get_level_values(1)
+    # df1.rename(columns={"mean":"std_mean","min":"std_min","sum":"event_count"}, inplace=True)
+    # display("mean STD per fragment over its subfragments", df1)
+
+    return df1["std"]
+
+
+
 
 ############################ MAIN ##################################
 if __name__ == "__main__":
@@ -113,12 +151,6 @@ if __name__ == "__main__":
     WIDTH = 1280
     HEIGHT = 720
 
-    # Format for events: (x, y, t (us or ms), p)
-    EVENTS_CSV_X_COL = 0
-    EVENTS_CSV_Y_COL = 1
-    EVENTS_CSV_T_COL = 2
-    EVENTS_CSV_P_COL = 3
-    
     # Precision of the timestamp in fractions per second.
     # For mikroseconds: 1000000, for milliseconds: 1000
     TIMESTEPS_PER_SECOND = 1_000_000
@@ -137,9 +169,12 @@ if __name__ == "__main__":
     # short: tbr: t bucket resolutions
     # BINS_PER_T_BUCKET = 250
     BINS_PER_T_BUCKET = int(T_BUCKET_LENGTH_MS * 2.5) # 250 for 100ms, 10000 for 4000ms
+    STAT_BINS_PER_T_BUCKET = 20
+    STAT_BIN_WIDTH = T_BUCKET_LENGTH / STAT_BINS_PER_T_BUCKET # in us
+
     
     # Save trajectory statistics
-    SAVE_STATISTICS = False
+    SAVE_STATISTICS = True
     # Save images of complete paths
     SAVE_IMAGES = True
     # Save images of each individual bucket (WARNING: Creates many images)
@@ -157,6 +192,8 @@ if __name__ == "__main__":
     FONT_NAME = cv2.FONT_HERSHEY_SIMPLEX
     FONT_SCALE = 0.5
     FONT_COLOR = 127  # BGR color (here, green)
+
+    STD_AGG_TYPE = "min" # min or mean
 
 
     # Paths
@@ -265,26 +302,30 @@ if __name__ == "__main__":
 
             print(f"Processing: \"{scene_id}/{instance_id}\" ({clas}) ({pts} points)")
 
+            # Read all trajectory events
             df = pd.read_csv(trajectory_filepath, sep=',', header="infer")
 
             # timestamp in csv was multplied by 0.002 (or something else). Scale it back to real time (micros)
-            t_col_real = df.loc[:,"t"] * INV_T_SCALE
+            df["t_real"] = df.loc[:,"t"] * INV_T_SCALE
+            df["stat_bucket"]  = df.t_real.floordiv(STAT_BIN_WIDTH).astype('Int64')
 
             # t_max is scaled! t_max_real is in real time (e.g. micros)
-            max_t_real = t_col_real.iloc[-1]
+            max_t_real = df["t_real"].iloc[-1]
             max_t_str = f"{int((max_t_real / TIMESTEPS_PER_SECOND) // 60):0>2}m:{(max_t_real / TIMESTEPS_PER_SECOND % 60):0>2.2f}s"
             
-            number_of_buckets = int(np.ceil(max_t_real/T_BUCKET_LENGTH))
-            bucket_index_per_event = (t_col_real // T_BUCKET_LENGTH).astype('Int64')
-            event_count_per_bucket = bucket_index_per_event.value_counts(sort=False).sort_index()
+            df["fragment_index"] = (df["t_real"] // T_BUCKET_LENGTH).astype('Int64')
+            number_of_fragments = int(np.ceil(max_t_real/T_BUCKET_LENGTH))
+
+            ev_count_per_fragment = df["fragment_index"].value_counts(sort=False).sort_index()
+            ev_count_per_fragment = ev_count_per_fragment.reindex(list(range(0, number_of_fragments)), fill_value=0)
             # -> problem: if there are 0 events in a bucket, the bucket wont be included in the dataframe!
             # create series of zeros with same length as event_count_per_bucket
-            event_count_per_bucket_no_gaps = pd.Series(data=[0]*number_of_buckets, index=list(range(number_of_buckets)))
-            for x in event_count_per_bucket.items():
-                # x[0] is the bucket index, x[1] is the bucket event count
-                event_count_per_bucket_no_gaps.at[x[0]] = x[1]
-            event_count_per_bucket = event_count_per_bucket_no_gaps
-
+            # ev_count_per_fragment_no_gaps = pd.Series(data=[0]*number_of_fragments, index=list(range(number_of_fragments)))
+            # for x in ev_count_per_fragment.items():
+            #     # x[0] is the bucket index, x[1] is the bucket event count
+            #     ev_count_per_fragment_no_gaps.at[x[0]] = x[1]
+            # ev_count_per_fragment = ev_count_per_fragment_no_gaps
+            
             # print("max_t_real", max_t_real, max_t_str)
             # print("Die Bahn hat", number_of_buckets, "buckets")
             # print(t_col_buckets.head())
@@ -295,39 +336,51 @@ if __name__ == "__main__":
             # print(event_count_per_bucket.head())
             # print(event_count_per_bucket)
 
+            # Calc stats (Std) per fragment
+            std_per_fragment = calc_std_per_frag(df, agg_type=STD_AGG_TYPE)
+            std_per_fragment = std_per_fragment.reindex(list(range(0, number_of_fragments)))
+            
+
             if SAVE_STATISTICS:
                 STATS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
                 traj_stats["event_count"] = len(df)
                 traj_stats["length_s"] = max_t_real / TIMESTEPS_PER_SECOND
                 traj_stats["class"] = clas
+                traj_stats["overall_mean_std"] = std_per_fragment.mean()
+                traj_stats["overall_min_std"] = std_per_fragment.min()
+                traj_stats["overall_max_std"] = std_per_fragment.max()
 
                 # Iterate fragments
-                for bucket_index in range(number_of_buckets):
-                    t_start = BINS_PER_T_BUCKET*bucket_index
+                for frag_index in range(number_of_fragments):
+                    t_start = BINS_PER_T_BUCKET*frag_index
                     t_length = BINS_PER_T_BUCKET
-                    t_length_real = (t_length / BINS_PER_T_BUCKET) * T_BUCKET_LENGTH
-                    t_end = t_start+t_length
-                    event_count = event_count_per_bucket[bucket_index]
+                    t_length_real = T_BUCKET_LENGTH
+                    frag_len_s = t_length_real/TIMESTEPS_PER_SECOND
+                    t_end = t_start+t_length # ???
+                    event_count = ev_count_per_fragment[frag_index]
+                    traj_ev_cnt = len(df.index)
+                    std = std_per_fragment[frag_index]
 
-                    fragment_stats = fragmentation_stats["fragments"].setdefault(bucket_index, {})
+                    fragment_stats = fragmentation_stats["fragments"].setdefault(frag_index, {})
                     # fragment_stats["t_start_s"] = t_start / TIMESTEPS_PER_SECOND
                     # fragment_stats["t_length_s"] = t_length_real
                     # fragment_stats["t_end_s"] = t_end / TIMESTEPS_PER_SECOND
                     fragment_stats["event_count"] = int(event_count)
 
                     # Columns: scene, instance_id, fragment_id, class, traj_evnt_count, traj_len_s, frag_evnt_count, frag_len_s
-                    fragments_stats.append( [scene_id, int(instance_id), bucket_index, clas, len(df), traj_stats["length_s"], int(event_count), t_length_real/TIMESTEPS_PER_SECOND] )
+                    fragments_stats.append( [scene_id, int(instance_id), frag_index, clas, traj_ev_cnt, traj_stats["length_s"], \
+                                             int(event_count), frag_len_s, std] )
 
             if SAVE_IMAGES:
                 # colors for bars in events histogram
                 bar_colors = []
-                for x in event_count_per_bucket:
+                for x in ev_count_per_fragment:
                     bar_colors.append(event_count_to_color(x, 4096))
 
                 # Project Trajectory to 2D plane: Only use (t,x) or (t,y)
-                tx_df, tx_heatmap, tx_extent = get_projected_heatmap(df, "t", "x", number_of_buckets*BINS_PER_T_BUCKET, WIDTH, number_of_buckets*T_BUCKET_LENGTH*T_SCALE)
-                ty_df, ty_heatmap, ty_extent = get_projected_heatmap(df, "t", "y", number_of_buckets*BINS_PER_T_BUCKET, HEIGHT, number_of_buckets*T_BUCKET_LENGTH*T_SCALE)
+                tx_df, tx_heatmap, tx_extent = get_projected_heatmap(df, "t", "x", number_of_fragments*BINS_PER_T_BUCKET, WIDTH, number_of_fragments*T_BUCKET_LENGTH*T_SCALE)
+                ty_df, ty_heatmap, ty_extent = get_projected_heatmap(df, "t", "y", number_of_fragments*BINS_PER_T_BUCKET, HEIGHT, number_of_fragments*T_BUCKET_LENGTH*T_SCALE)
 
                 # log_tx_heatmap = np.log2(tx_heatmap+1)
                 # log_ty_heatmap = np.log2(ty_heatmap+1)
@@ -347,16 +400,30 @@ if __name__ == "__main__":
                     tx_heatmap_image = draw_t_ticks_into_image(tx_heatmap_image, BINS_PER_T_BUCKET, predicitons, pred_classes, scene_id, instance_id)
                     ty_heatmap_image = draw_t_ticks_into_image(ty_heatmap_image, BINS_PER_T_BUCKET, predicitons, pred_classes, scene_id, instance_id)
 
-                fig, axs = plt.subplots(3, gridspec_kw={'height_ratios': [1280,720,500]})
+                fig, axs = plt.subplots(4, gridspec_kw={'height_ratios': [1280,720,300,300]})
                 fig.set_size_inches(20, 8)
-                fig.suptitle(f't-x-, t-y-projection and event histogram of "{scene_id}/{instance_id}" ({clas}) (length: {max_t_str}, {pts} points)')
+                fig.suptitle(f't-x-, t-y-projection and event histogram of "{scene_id}/{instance_id}" ({clas}) (length: {max_t_str}, {pts} points)',\
+                             size=14, y=0.92)
+
                 axs[0].imshow(tx_heatmap_image, origin='upper', cmap="gray", aspect="auto")
                 axs[1].imshow(ty_heatmap_image, origin='upper', cmap="gray", aspect="auto")
-                axs[2].set_xlim(left=0, right=number_of_buckets)
-                axs[2].bar(list(range(number_of_buckets)), event_count_per_bucket, width=1.0, align="edge", color=bar_colors)
+
+                # Show all x ticks if less than 40 fragments; Else its too much text
+                xtick_label = ev_count_per_fragment.index if number_of_fragments <= 40 else None
+
+                axs[2].set_xlim(left=0, right=number_of_fragments)
+                axs[2].bar(ev_count_per_fragment.index, ev_count_per_fragment, width=0.98, align="edge", \
+                           color=bar_colors, tick_label=xtick_label)
+                axs[2].grid(axis="y")
+
+                axs[3].set_xlim(left=0, right=number_of_fragments)
+                axs[3].bar(x=std_per_fragment.index, height=std_per_fragment, width=0.98, align="edge", \
+                           color="#2299cc", tick_label=xtick_label)
+                axs[3].grid(axis="y")
+
 
                 # Save images of full trajectory
-                tra_output_dir = FIGURE_OUTPUT_DIR  / trajectory_filepath.parent.name
+                tra_output_dir = FIGURE_OUTPUT_DIR / trajectory_filepath.parent.name
                 tra_output_dir.mkdir(exist_ok=True, parents=True)
 
                 # Save detailled image
@@ -383,13 +450,13 @@ if __name__ == "__main__":
                     parts_output_dir_typroj.mkdir(exist_ok=True, parents=True)
 
                     # Create images of parts of the trajectory
-                    for bucket_index in range(number_of_buckets):
-                        t_start = BINS_PER_T_BUCKET*bucket_index
+                    for frag_index in range(number_of_fragments):
+                        t_start = BINS_PER_T_BUCKET*frag_index
                         t_length = BINS_PER_T_BUCKET
                         t_length_real = (t_length / BINS_PER_T_BUCKET) * T_BUCKET_LENGTH
                         t_length_str = f"{(t_length_real / TIMESTEPS_PER_SECOND):0>2.2f}s"
                         t_end = t_start+t_length
-                        event_count = event_count_per_bucket[bucket_index]
+                        event_count = ev_count_per_fragment[frag_index]
 
                         if event_count == 0:
                             continue
@@ -410,10 +477,10 @@ if __name__ == "__main__":
                         ty_heatmap_tycrop = hist2d_to_image(ty_heatmap_tycrop)
 
                         # Save tx-projection and ty-projection with OpenCV
-                        figure_filepath = parts_output_dir_txproj / f"{instance_id}_p{bucket_index}_txproj_{event_count}pts.png"
+                        figure_filepath = parts_output_dir_txproj / f"{instance_id}_p{frag_index}_txproj_{event_count}pts.png"
                         cv2_imwrite(figure_filepath, tx_heatmap_tycrop)
 
-                        figure_filepath = parts_output_dir_typroj / f"{instance_id}_p{bucket_index}_typroj_{event_count}pts.png"
+                        figure_filepath = parts_output_dir_typroj / f"{instance_id}_p{frag_index}_typroj_{event_count}pts.png"
                         cv2_imwrite(figure_filepath, ty_heatmap_tycrop)
 
         #         break
@@ -425,6 +492,6 @@ if __name__ == "__main__":
             json.dump(stats, outfile)
 
         fragments_df = pd.DataFrame(fragments_stats, \
-                columns=["scene", "instance_id", "fragment_id", "class", "traj_evnt_count", "traj_len_s", "frag_evnt_count", "frag_len_s"])
+                columns=["scene", "instance_id", "fragment_id", "class", "traj_evnt_count", "traj_len_s", "frag_evnt_count", "frag_len_s", "frag_std"])
         fragments_df.to_csv(STATS_OUTPUT_DIR / "all_fragments.csv", index=False, header=True, decimal='.', sep=',', float_format='%.3f')
         print(fragments_df)
