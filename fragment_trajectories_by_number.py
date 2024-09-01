@@ -29,14 +29,14 @@ if __name__ == "__main__":
     scenes = [
         # "1_l-l-l",
         # "2_l-h-l",
-        "3_m-h-h",
+        # "3_m-h-h",
         # "4_m-m-h",
         # "5_h-l-h",
         # "6_h-h-h_filtered",
     ]
 
     for scene in scenes:
-        csv_dir = CSV_BASE_DIR / f"{scene}_trajectories"
+        csv_dir = CSV_BASE_DIR / f"{scene}"
         output_base_dir = csv_dir / f"fragments_pts{MAX_EVENTS_PER_TRAJECTORY}_concwindows{CONCURRENT_WINDOWS}"
 
         print(f"Processing dir: {csv_dir}")

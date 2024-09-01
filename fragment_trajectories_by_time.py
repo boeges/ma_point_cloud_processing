@@ -3,8 +3,6 @@
 # Each part has the same time length. 
 # Points will be reduced or created to achieve exactly 4096 points.
 
-# TODO move points in (x,y) around origin?
-
 import csv
 import json
 import numpy as np
@@ -104,11 +102,11 @@ if __name__ == "__main__":
     T_BUCKET_LENGTH_MS = int(T_BUCKET_LENGTH / TIMESTEPS_PER_SECOND * 1000)
     # This is our target event count per fragment; Use "all" to keep original event count
     # EVENTS_PER_FRAGMENT = "all"
-    EVENTS_PER_FRAGMENT = "all"
+    EVENTS_PER_FRAGMENT = 4096
     # Min number of events a fragment needs before adding or removing events
     MIN_EVENTS_COUNT = 2048
 
-    DOWNSAMPLE_METHOD = "random" # "random", "farthest_point"
+    DOWNSAMPLE_METHOD = "farthest_point" # "random", "farthest_point"
     DOWNSAMPLE_METHOD_STR = "fps" if DOWNSAMPLE_METHOD=="farthest_point" else ("rnd" if DOWNSAMPLE_METHOD=="random" else "no")
 
     NOISE_REDUCTION_METHOD = "sor" # "none", "sor" = statistical outlier removal
@@ -129,6 +127,11 @@ if __name__ == "__main__":
         f"{NORMALIZE_STR}{SHUFFLE_T_STR}{DATETIME_STR_PREFIX}"
     LOG_DIR = Path("output/logs/fragmentation") / DATETIME_STR
 
+    # scene name starts with
+    EXCLUDE_SCENES_FROM_STATS = [
+        "hn-depth",
+    ]
+
     # Save parameters to json file
     OPTION_NAMES = [
         "DATETIME_STR",
@@ -147,6 +150,8 @@ if __name__ == "__main__":
         "MIN_EVENTS_COUNT",
         "DOWNSAMPLE_METHOD",
         "NOISE_REDUCTION_METHOD",
+        "NORMALIZE",
+        "SHUFFLE_T"
     ]
     LOG_DIR.mkdir(exist_ok=True, parents=True)
     get_options_json(OPTION_NAMES, vars(), LOG_DIR / "options.json")
@@ -159,25 +164,36 @@ if __name__ == "__main__":
             (OUTPUT_DATASET_DIR / cl).mkdir(exist_ok=True)
 
     # Find all trajectory dirs
-    trajectory_dirs = [d for d in TRAJECTORIES_BASE_DIR.glob("*_trajectories*")]
+    trajectory_dirs = [d for d in TRAJECTORIES_BASE_DIR.glob("*")]
+
+    # Exclude dirs from EXCLUDE_SCENES_FROM_STATS
+    trajectory_dirs2 = []
+    for trajectory_dir in trajectory_dirs:
+        exclude_scene_from_stats = False
+        for sn in EXCLUDE_SCENES_FROM_STATS:
+            if trajectory_dir.name.startswith(sn):
+                exclude_scene_from_stats = True
+                break
+        if exclude_scene_from_stats:
+            print("Excluding scene", trajectory_dir.name)
+            continue
+        trajectory_dirs2.append(trajectory_dir)
+    trajectory_dirs = trajectory_dirs2
 
     # FOR TESTING!
-    # trajectory_dirs = [d for d in TRAJECTORIES_BASE_DIR.glob("hn-depth-1_trajectories")]
+    # trajectory_dirs = [d for d in TRAJECTORIES_BASE_DIR.glob("hn-depth-1")]
 
     fragments_stats = []
 
     for trajectory_dir in trajectory_dirs:
-        # Extract trajectory dir simple name
-        try:
-            # return scene name or scene id, depending on dir
-            scene_id = bee.dir_to_scene_name(trajectory_dir.name)
-        except RuntimeError:
-            print("### Skipping", trajectory_dir.name, ", Doesnt match file scene dir pattern!")
-            continue
+        scene_id = trajectory_dir.name
 
-        if not bee.is_scene_id(scene_id):
-            # convert scene name to id; If it is already an id, it returns the id
+        # convert scene name to id; If it is already an id, it returns the id; If it fails, skip dir!
+        try:
             scene_id = bee.scene_name_to_id(scene_id)
+        except RuntimeError:
+            print("### Skipping", trajectory_dir.name, ", Failed to obtain scene id from dir name!")
+            continue
 
         # Find all files from directory
         trajectory_files = [file for file in trajectory_dir.iterdir() \

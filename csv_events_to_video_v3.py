@@ -42,7 +42,7 @@ if __name__ == "__main__":
     PRINT_PROGRESS_EVERY_N_PERCENT = 1
 
     # CSV_DIR = Path("../../datasets/Insektenklassifikation")
-    CSV_DIR = Path("../../aufnahmen/2024-08-06_libellen/exported_csv")
+    CSV_DIR = Path("../../aufnahmen/2024-07-18_bunter_garten/exported_csv")
     # CSV_DIR = Path("../../datasets/juli_instance_segmented")
     OUTPUT_DIR = Path("output/csv_to_video")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -61,11 +61,25 @@ if __name__ == "__main__":
     print(f"Found {len(csv_filenames)} csv files")
 
     # ... or use only this file:
-    # csv_filenames = [
-    #     # "vieleSchmetterlinge2.csv"
-    #     # "COMBINED1_scale_classify_2022-07-16_19-24-08_teil3.csv"
-    #     # "mb-dra1-1.csv"
-    # ]
+    csv_filenames = [
+        # "vieleSchmetterlinge2.csv",
+        # "COMBINED1_scale_classify_2022-07-16_19-24-08_teil3.csv",
+        # "mb-dra1-1.csv",
+        "mb-bum1-1.csv",
+        "mb-bum1-2.csv",
+        "mb-bum1-3.csv",
+        "mb-bum1-4.csv",
+        "mb-bum1-5.csv",
+        "mb-bum1-6.csv",
+        "mb-bum1-7.csv",
+        "mb-bum1-8.csv",
+        "mb-bum1-9.csv",
+        "mb-bum1-10.csv",
+        "mb-bum2-1.csv",
+        "mb-bum2-2.csv",
+        "mb-bum2-3.csv",
+        "mb-bum2-4.csv",
+    ]
 
     for csv_filename in csv_filenames:
         csv_filestem = csv_filename.replace(".csv", "")

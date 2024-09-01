@@ -52,7 +52,7 @@ if __name__ == "__main__":
             print("Skipping file", input_labels_filepath, ". Output file already exists!")
             continue
 
-        print("\nProcessing label file", input_labels_filepath, "...")
+        print("Processing label file", input_labels_filepath, "...")
 
         assigned_ids = set()
         max_id = 0
@@ -100,8 +100,5 @@ if __name__ == "__main__":
 
                 max_frame_index_of_label[instance_id] = frame_index
                 
-
-
-        print(f"Created label file {output_label_filepath}!")
 
 

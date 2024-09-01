@@ -30,7 +30,7 @@ def raw_to_csv(module, raw_path, output_dir, startts, endts):
 
 if __name__ == "__main__":
     script_path = "G:/Program Files/Prophesee/share/metavision/sdk/core/python_samples/metavision_file_to_csv/metavision_file_to_csv2.py"
-    output_dir = "D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/2024-08-06_libellen/exported_csv/"
+    output_dir = "D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/pf_wespen/exported_csv/"
 
     module = import_module(script_path)
 
@@ -76,15 +76,21 @@ if __name__ == "__main__":
     #     ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/2024-07-18_bunter_garten/mb-bum2-4.raw", 0, -1),
     # ]
 
+    # raw_paths = [
+    #     ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/2024-08-06_libellen/mb-dra1-1.raw", 0, -1),
+    #     ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/2024-08-06_libellen/mb-dra1-2.raw", 0, -1),
+    #     ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/2024-08-06_libellen/mb-dra1-3.raw", 0, -1),
+    #     ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/2024-08-06_libellen/mb-dra1-4.raw", 0, -1),
+    #     ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/2024-08-06_libellen/mb-dra2-1.raw", 0, -1),
+    #     ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/2024-08-06_libellen/mb-dra2-2.raw", 0, -1),
+    #     ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/2024-08-06_libellen/mb-dra2-3.raw", 0, -1),
+    #     ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/2024-08-06_libellen/mb-dra2-4.raw", 0, -1),
+    # ]
+
     raw_paths = [
-        ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/2024-08-06_libellen/mb-dra1-1.raw", 0, -1),
-        ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/2024-08-06_libellen/mb-dra1-2.raw", 0, -1),
-        ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/2024-08-06_libellen/mb-dra1-3.raw", 0, -1),
-        ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/2024-08-06_libellen/mb-dra1-4.raw", 0, -1),
-        ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/2024-08-06_libellen/mb-dra2-1.raw", 0, -1),
-        ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/2024-08-06_libellen/mb-dra2-2.raw", 0, -1),
-        ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/2024-08-06_libellen/mb-dra2-3.raw", 0, -1),
-        ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/2024-08-06_libellen/mb-dra2-4.raw", 0, -1),
+        # ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/pf_wespen/hn-was-4.raw", 0, -1),
+        # ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/pf_wespen/hn-was-5.raw", 0, -1),
+        ("D:/Bibliothek/Workspace/_Studium/MA/aufnahmen/pf_wespen/hn-was-6.raw", 0, -1),
     ]
 
     for path,sts,ets in raw_paths:

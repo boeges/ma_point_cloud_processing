@@ -44,7 +44,7 @@ CLASS_ABBREVIATIONS = {
 CLASSES = list(CLASS_ABBREVIATIONS.keys())
 
 # scene_id: [full scene name, short scene id]
-# TODO remove short ids!
+# TODO remove short ids and full names!
 """ scene_id: [full scene name, short scene id] """
 SCENE_ID_ALIASES = {
     # HSNR
@@ -68,11 +68,23 @@ SCENE_ID_ALIASES = {
     "mu-5":             ["5_h-l-h", "m5"],
     "mu-6":             ["6_h-h-h_filtered", "m6"],
     # MB
-    "mb-dra1-1":        ["mb-dra1-1", None],
-    "mb-dra2-1":        ["mb-dra1-1", None],
+    "mb-dra1-1":        None,
+    "mb-dra2-1":        None,
+    "mb-bum1-1":        None,
+    "mb-bum1-2":        None,
+    "mb-bum1-3":        None,
+    "mb-bum1-4":        None,
+    "mb-bum1-5":        None,
+    "mb-bum2-1":        None,
     "mb-bum2-2":        ["mb-bum2-2", "mb33"],
-
 }
+
+# fill name with id
+for k in SCENE_ID_ALIASES:
+    if SCENE_ID_ALIASES[k] == None:
+        SCENE_ID_ALIASES[k] = [k, None]
+
+
 """ short_id: [scene_name, id] """
 SCENE_SHORT_ID_ALIASES = {v[1]: [v[0], k] for k, v in SCENE_ID_ALIASES.items()}
 """ scene_name: [short_id, id] """
@@ -82,7 +94,7 @@ SCENE_IDS = list(SCENE_ID_ALIASES.keys())
 SCENE_NAMES = [s[0] for s in SCENE_ID_ALIASES.values()]
 
 # zb "1_l-l-l_trajectories_2024-05-29_15-27-12"
-DIR_NAME_PATTERN = re.compile(r"^(.+)_trajectories.*")
+DIR_NAME_PATTERN = re.compile(r"^(.+)$")
 # check if a string is a (normal) scene id
 SCENE_ID_PATTERN = re.compile(r"^([a-z][a-z0-9]*\-){1,2}[a-z0-9]+$")
 
@@ -283,6 +295,9 @@ if __name__ == "__main__":
 
     for k,v in CLASS_COLORS_BY_NAME.items():
         print(k, v)
+
+    for s,v in SCENE_NAME_ALIASES.items():
+        print(s+".csv"+"|"+v[1]+".csv")
 
 
     print("""

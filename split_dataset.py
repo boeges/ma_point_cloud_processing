@@ -215,15 +215,15 @@ def find_split(samples, frags_per_instance, ntrain):
         frag_count = selection['size'].sum()
         if frag_count >= ntrain:
             # Take all fragments from these instances
-            train = samples[samples["instance_id"].isin(selection["instance_id"])].index
+            train = samples[samples["traj_id"].isin(selection["traj_id"])].index
             # Take all fragments that are NOT from these instances
-            test = samples[~samples["instance_id"].isin(selection["instance_id"])].index
+            test = samples[~samples["traj_id"].isin(selection["traj_id"])].index
             return train, test
     return [],[]
 
 
 if __name__ == "__main__":
-    DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4")
+    DIR = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5")
 
     # creates a random split over all fragments
     # create_split(DIR, 40, 0.5)

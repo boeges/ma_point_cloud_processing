@@ -654,7 +654,7 @@ class TsneInspector:
             ind = self.selected_ind[0]
             scene_id, instance_id, frag_index = self.get_df().at[ind, "frag_id"]
             scene_name = bee.scene_aliases_by_id(scene_id)[0]
-            scene_dir = self.figures_dir / (scene_name+"_trajectories")
+            scene_dir = self.figures_dir / (scene_name+"")
 
             if not scene_dir.exists():
                 print("ERROR: Directory " + str(scene_dir) + " does not exist!")

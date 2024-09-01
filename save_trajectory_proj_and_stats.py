@@ -176,7 +176,7 @@ if __name__ == "__main__":
     # Save trajectory statistics
     SAVE_STATISTICS = True
     # Save images of complete paths
-    SAVE_IMAGES = True
+    SAVE_IMAGES = False
     # Save images of each individual bucket (WARNING: Creates many images)
     SAVE_BUCKET_IMAGES = False
     # BINS_PER_T_BUCKET = T_BUCKET_LENGTH_MS # a bucket for every ms
@@ -195,13 +195,23 @@ if __name__ == "__main__":
 
     STD_AGG_TYPE = "min" # min or mean
 
-
     # Paths
     TRAJECTORIES_BASE_DIR = Path("output/extracted_trajectories/3_classified")
     PREDICTION_FILE = Path("../Pointnet_Pointnet2_pytorch/log/classification/msg_cls4A_e40_bs16_split7030/logs/pred_per_sample_2024-08-07_23-49.csv")
     # tf: timeframe
     FIGURE_OUTPUT_DIR = Path("output/figures/projection_and_hist") / f"tf{T_BUCKET_LENGTH_MS}ms_tbr{BINS_PER_T_BUCKET}{DRAW_PREDICTIONS_STR}{DATETIME_STR_PREFIX}"
     STATS_OUTPUT_DIR = Path("output/statistics/hist/") / f"tf{T_BUCKET_LENGTH_MS}ms_{DATETIME_STR}"
+
+    # only include these scenes
+    SCENE_STARTS_WITH = [
+        # "hn-was",
+        # "mb-bum"
+    ]
+
+    # scene name starts with
+    EXCLUDE_SCENES_FROM_STATS = [
+        "hn-depth",
+    ]
 
     # stats = {
     # <scene_name>: {
@@ -254,21 +264,38 @@ if __name__ == "__main__":
                 predicitons[frag_id] = pred
 
     # zb "1_l-l-l_trajectories_2024-05-29_15-27-12"
-    dir_name_pattern = re.compile(r"^(.*)_trajectories.*")
+    # dir_name_pattern = re.compile(r"^(.*)")
 
     # Find existing figure dirs to skip them
     if OVERWRITE_EXISTING:
         existing_figure_dir_names = []
     else:
-        existing_figure_dir_names = [d.name for d in FIGURE_OUTPUT_DIR.glob("*_trajectories*")]
+        existing_figure_dir_names = [d.name for d in FIGURE_OUTPUT_DIR.glob("*")]
 
     # Find all trajectory dirs; Skip existing
-    trajectory_dirs = [d for d in TRAJECTORIES_BASE_DIR.glob("*_trajectories*") if d.name not in existing_figure_dir_names]
+    trajectory_dirs = [d for d in TRAJECTORIES_BASE_DIR.glob("*") if d.name not in existing_figure_dir_names]
 
-    # FOR TESTING! Only use this trajectory
-    # trajectory_dirs = [TRAJECTORIES_BASE_DIR / "mb-dra1-1_trajectories"]
-
+    # Skip scenes that do not start with a scene name in SCENE_STARTS_WITH
     for trajectory_dir in trajectory_dirs:
+        if len(SCENE_STARTS_WITH) > 0:
+            found_scene = False
+            for sn in SCENE_STARTS_WITH:
+                if trajectory_dir.name.startswith(sn):
+                    found_scene = True
+                    break
+            if not found_scene:
+                print("Skipping:", trajectory_dir.name, ". Scene name not in SCENE_STARTS_WITH!")
+                continue
+
+        exclude_scene_from_stats = False
+        if len(EXCLUDE_SCENES_FROM_STATS) > 0:
+            for sn in EXCLUDE_SCENES_FROM_STATS:
+                if trajectory_dir.name.startswith(sn):
+                    exclude_scene_from_stats = True
+                    break
+            if exclude_scene_from_stats:
+                print("Excluding", trajectory_dir.name, "from stats!")
+
         # Extract trajectory dir simple name
         try:
             scene_id = bee.dir_to_scene_name(trajectory_dir.name)
@@ -341,7 +368,7 @@ if __name__ == "__main__":
             std_per_fragment = std_per_fragment.reindex(list(range(0, number_of_fragments)))
             
 
-            if SAVE_STATISTICS:
+            if SAVE_STATISTICS and not exclude_scene_from_stats:
                 STATS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
                 traj_stats["event_count"] = len(df)
@@ -370,7 +397,7 @@ if __name__ == "__main__":
 
                     # Columns: scene, instance_id, fragment_id, class, traj_evnt_count, traj_len_s, frag_evnt_count, frag_len_s
                     fragments_stats.append( [scene_id, int(instance_id), frag_index, clas, traj_ev_cnt, traj_stats["length_s"], \
-                                             int(event_count), frag_len_s, std] )
+                                                int(event_count), frag_len_s, std] )
 
             if SAVE_IMAGES:
                 # colors for bars in events histogram
@@ -488,6 +515,7 @@ if __name__ == "__main__":
         # break
 
     if SAVE_STATISTICS:
+        STATS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         with open(STATS_OUTPUT_DIR / "all.json", "w") as outfile:
             json.dump(stats, outfile)
 
