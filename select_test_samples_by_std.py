@@ -6,7 +6,7 @@ from pathlib import Path
 import bee_utils as bee
 
 # columns ["split", "sample_id"]
-SPLIT_PATH = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5/train_test_split_7030.txt")
+SPLIT_PATH = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5/train_test_split_7030.txt")
 
 # columns ['scene', 'instance_id', 'fragment_id', 'class', 'traj_evnt_count', 'traj_len_s', 'frag_evnt_count', 'frag_len_s', 'frag_std']
 STATS_PATH = Path("output/statistics/hist/tf100ms_ds5/all_fragments.csv")

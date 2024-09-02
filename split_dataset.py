@@ -223,7 +223,7 @@ def find_split(samples, frags_per_instance, ntrain):
 
 
 if __name__ == "__main__":
-    DIR = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5")
+    DIR = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5_diff")
 
     # creates a random split over all fragments
     # create_split(DIR, 40, 0.5)
