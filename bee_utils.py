@@ -197,6 +197,14 @@ def frag_filename_to_id_str(fn):
     """
     return "_".join(fn.split("/")[-1].split("\\")[-1].replace(".csv","").split("_")[-3:])
 
+def get_rgba_of_class_index(class_index, alpha=1.0):
+    if isinstance(class_index, pd.Series):
+        # convert whole series (pd.Series)
+        return class_index.apply(lambda v: get_rgba_of_class_index(v, alpha))
+    # cnvert single int
+    clr = CLASS_COLORS[int(class_index)]
+    return tuple([*clr[:3]]+[alpha])
+
 
 def get_rgba_of_class_name_df(class_name_and_conf):
     """

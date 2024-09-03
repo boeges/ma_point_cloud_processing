@@ -41,25 +41,33 @@ ACTIVATIONS_DIR_FN = Path("../foldingnet2/snapshot/")
 # ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split7030_ds4//logs/activations_per_sample_ds4.csv"
 # ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split7030_ds4/logs/activations_per_sample_ds4_w_depth.csv"
 # ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split7030_ds4/logs/activations_per_sample_2024-08-20_23-15.csv"
-ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls4A_e40_bs8_pts4096_split7030_ds4rnd/logs/activations_per_sample.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls4A_e40_bs8_pts4096_split7030_ds4rnd/logs/activations_per_sample.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split40shot_ds5rnd/logs/activations_per_sample.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split100shot_ds5fps/logs/activations_per_sample.csv"
+ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split7030_ds5fps/logs/activations_per_sample.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split7030_ds5rnd/logs/activations_per_sample.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls6_e40_bs8_pts4096_split7030_ds5rnd_diff/logs/activations_per_sample.csv"
 
-# ACTIVATIONS_FILE = ACTIVATIONS_DIR_FN / "Reconstruct_insect_foldnet_gaussian_k20_e1600/features/activations_per_sample_2024-07-30_18-04.csv")
-# ACTIVATIONS_FILE = ACTIVATIONS_DIR_FN / "Reconstruct_insect_foldnet_gaussian_k20_e2000_feat512_pts4096_augment/features/activations_per_sample_2024-08-03_22-16.csv")
-# ACTIVATIONS_FILE = ACTIVATIONS_DIR_FN / "Reconstruct_insect_foldnet_gaussian_k40_e1600_feat1024_pts4096_augment_3/features/activations_per_sample_2024-08-09_16-49.csv")
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_FN / "Reconstruct_insect_foldnet_gaussian_k20_e1600/features/activations_per_sample_2024-07-30_18-04.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_FN / "Reconstruct_insect_foldnet_gaussian_k20_e2000_feat512_pts4096_augment/features/activations_per_sample_2024-08-03_22-16.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_FN / "Reconstruct_insect_foldnet_gaussian_k40_e1600_feat1024_pts4096_augment_3/features/activations_per_sample_2024-08-09_16-49.csv"
 
-# DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_3")
 # DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4")
 # DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4_w_depth")
-DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_4")
-# DATASET_DIR = Path("../../datasets/insect/100ms_2048pts_fps-ds_sor-nr_norm_shufflet_1")
+DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5")
+# DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5")
+# DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5_diff")
 
 # DATASET_SPLIT_FILE = None
-# DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_3/train_test_split_40shot_1.txt")
+DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5/all_train_minstd3.txt")
 # DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4/train_test_split_40shot.txt")
-DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4/train_test_split_7030.txt")
+# DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5/train_test_split_7030.txt")
+# DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5/train_test_split_7030.txt")
+# DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5/train_test_split_100shot_minstd3.txt")
+# DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5_diff/train_test_split_7030.txt")
 
 # Contains exported 2d projections
-FIGURES_DIR = Path("output/figures/projection_and_hist/tf100ms_tbr250_1")
+FIGURES_DIR = Path("output/figures/projection_and_hist/tf100ms_tbr250_2")
 # Labels mapping file will be exported to this dir
 LABELS_OUTPUT_DIR = Path("output/instance_classes/tsne_inspector")
 # Dir with bbox annotations; Existing files will be overwritten!
@@ -185,6 +193,8 @@ class TsneInspector:
             all_have_one_class = (df.groupby(["scene_id", "instance_id"]).nunique()["target_name"] == 1).all()
             if not all_have_one_class:
                 print("ERROR: Cannot group by scene and instance_id; Some instances have more than one class!")
+                df1 = df.groupby(["scene_id", "instance_id"]).nunique()["target_name"]
+                print(df1[df1["target_name"]>1])
                 exit()
             
             # from these columns take the first value in a group
@@ -193,12 +203,14 @@ class TsneInspector:
             # Create an aggregation dictionary
             agg_dict = {}
             agg_dict.update( {col: "first" for col in take_first_cols} )
+            agg_dict.update( {col: "mean" for col in self.class_cols} )
             agg_dict.update( {col: "mean" for col in self.act_cols} )
 
             # Group by column "A", aggregate the numeric columns by mean, and take the first value of "B"
             df = df.groupby(["scene_id","instance_id"]).agg(agg_dict).reset_index()
 
         print(df.head())
+        # print("columns:", df.columns)
 
         self.full_df = df
 
@@ -724,8 +736,8 @@ class TsneInspector:
         elif len(self.selected_ind)==1:
             ind = self.selected_ind[0]
             scene_id, instance_id, frag_index = self.get_df().at[ind, "frag_id"]
-            scene_name = bee.scene_aliases_by_id(scene_id)[0]
-            scene_dir = self.figures_dir / (scene_name)
+            # scene_name = bee.scene_aliases_by_id(scene_id)[0]
+            scene_dir = self.figures_dir / scene_id
 
             if not scene_dir.exists():
                 print("ERROR: Directory " + str(scene_dir) + " does not exist!")

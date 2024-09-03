@@ -96,8 +96,8 @@ if __name__ == "__main__":
 
     # Files that use the old/defect v1 video export format (wrong frametimes!)
     v1_video_filestems = [
-        "hauptsächlichBienen1",
-        "vieleSchmetterlinge2"
+        "hn-bee-1",
+        "hn-but-2"
     ]
 
     filestems = [
