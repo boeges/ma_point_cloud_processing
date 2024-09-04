@@ -223,14 +223,14 @@ def find_split(samples, frags_per_instance, ntrain):
 
 
 if __name__ == "__main__":
-    DIR = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5")
+    DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5_diff")
 
     # creates a random split over all fragments
     # create_split(DIR, 40, 0.5)
 
     # creates a split by keeping all fragments of a trajectory in the same split
     create_split2(DIR, 0.7, 0.5)
-    create_split2(DIR, 40, 0.5)
+    # create_split2(DIR, 40, 0.5)
     create_split2(DIR, 100, 0.5)
 
     

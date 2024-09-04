@@ -7,8 +7,8 @@ from pathlib import Path
 
 
 EASY_DIFF_PATH = Path("output/fragment_labels/fragment_easy_difficult_ds5_1.csv")
-DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5")
-OUTPUT_DIR = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5_diff")
+DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5")
+OUTPUT_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5_diff")
 
 # Find all csv files in CSV_DIR
 files = list(DATASET_DIR.glob("*/*.csv"))
