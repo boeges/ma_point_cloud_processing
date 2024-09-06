@@ -113,9 +113,7 @@ def calc_std_per_frag(df:pd.DataFrame, agg_type="min") -> pd.Series:
         "x":"std",
         "y":"std",
     }
-
     df1 = df.groupby([df.fragment_index, df.stat_bucket]).agg(agg)
-
     # df1["std"] = df1[["x","y"]].sum(axis=1, min_count=1)
     df1["std"] = df1[["x","y"]].mean(axis=1)
     df1["std"].fillna(0.0, inplace=True)
@@ -124,7 +122,6 @@ def calc_std_per_frag(df:pd.DataFrame, agg_type="min") -> pd.Series:
     agg1 = {
         "std":agg_type,
     }
-
     df1 = df1.groupby(level=0).agg(agg1)
     # df1.columns = df1.columns.get_level_values(1)
     # df1.rename(columns={"mean":"std_mean","min":"std_min","sum":"event_count"}, inplace=True)

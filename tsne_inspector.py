@@ -43,10 +43,11 @@ ACTIVATIONS_DIR_FN = Path("../foldingnet2/snapshot/")
 # ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split7030_ds4/logs/activations_per_sample_2024-08-20_23-15.csv"
 # ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls4A_e40_bs8_pts4096_split7030_ds4rnd/logs/activations_per_sample.csv"
 # ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split40shot_ds5rnd/logs/activations_per_sample.csv"
-ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split100shot_ds5fps/logs/activations_per_sample.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split100shot_ds5fps/logs/activations_per_sample.csv"
 # ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split7030_ds5fps/logs/activations_per_sample.csv"
 # ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split7030_ds5rnd/logs/activations_per_sample.csv"
-# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls6_e40_bs8_pts4096_split7030_ds5rnd_diff/logs/activations_per_sample.csv"
+ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls6_e40_bs8_pts4096_split7030_ds5rnd_diff/logs/activations_per_sample.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls6_e40_bs8_pts4096_split7030_minstd3_ds5fps/logs/activations_per_sample.csv"
 
 # ACTIVATIONS_FILE = ACTIVATIONS_DIR_FN / "Reconstruct_insect_foldnet_gaussian_k20_e1600/features/activations_per_sample_2024-07-30_18-04.csv"
 # ACTIVATIONS_FILE = ACTIVATIONS_DIR_FN / "Reconstruct_insect_foldnet_gaussian_k20_e2000_feat512_pts4096_augment/features/activations_per_sample_2024-08-03_22-16.csv"
@@ -54,18 +55,19 @@ ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split100shot_
 
 # DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4")
 # DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4_w_depth")
-DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5")
+# DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5")
 # DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5")
-# DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5_diff")
+DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5_diff")
 
 # DATASET_SPLIT_FILE = None
 # DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5/all_train_minstd3.txt")
 # DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4/train_test_split_40shot.txt")
 # DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5/train_test_split_7030.txt")
+# DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5/train_test_split_100shot.txt")
+# DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5/train_test_split_7030_minstd3.txt")
 # DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5/train_test_split_7030.txt")
-DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5/train_test_split_100shot.txt")
 # DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5/train_test_split_100shot_minstd3.txt")
-# DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5_diff/train_test_split_7030.txt")
+DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5_diff/train_test_split_7030.txt")
 
 # Contains exported 2d projections
 FIGURES_DIR = Path("output/figures/projection_and_hist/tf100ms_tbr250_2")
@@ -75,7 +77,7 @@ LABELS_OUTPUT_DIR = Path("output/instance_classes/tsne_inspector")
 ANNOTATIONS_DIR = Path("output/video_annotations/3_classified")
 
 SHOW_TEST_AS_UNLABELED = False
-GROUP_TO_TRAJECORIES = True # True: Points are whole trajectories; false: Points are fragments
+GROUP_TO_TRAJECORIES = False # True: Points are whole trajectories; false: Points are fragments
 COL_USED_FOR_COLORS = "target_name" # "target_name" or "pred_name"
 
 
