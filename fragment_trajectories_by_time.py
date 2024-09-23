@@ -102,14 +102,14 @@ if __name__ == "__main__":
     T_BUCKET_LENGTH_MS = int(T_BUCKET_LENGTH / TIMESTEPS_PER_SECOND * 1000)
     # This is our target event count per fragment; Use "all" to keep original event count
     # EVENTS_PER_FRAGMENT = "all"
-    EVENTS_PER_FRAGMENT = 4096
+    EVENTS_PER_FRAGMENT = 2048
     # Min number of events a fragment needs before adding or removing events
-    MIN_EVENTS_COUNT = 2048
+    MIN_EVENTS_COUNT = 1024
 
     DOWNSAMPLE_METHOD = "farthest_point" # "random", "farthest_point"
     DOWNSAMPLE_METHOD_STR = "fps" if DOWNSAMPLE_METHOD=="farthest_point" else ("rnd" if DOWNSAMPLE_METHOD=="random" else "no")
 
-    NOISE_REDUCTION_METHOD = "sor" # "none", "sor" = statistical outlier removal
+    NOISE_REDUCTION_METHOD = "none" # "none", "sor" = statistical outlier removal
 
     # Normalize point clouds of each fragment
     NORMALIZE = True
@@ -181,7 +181,7 @@ if __name__ == "__main__":
     trajectory_dirs = trajectory_dirs2
 
     # FOR TESTING!
-    # trajectory_dirs = [d for d in TRAJECTORIES_BASE_DIR.glob("hn-depth-1")]
+    # trajectory_dirs = [d for d in TRAJECTORIES_BASE_DIR.glob("mb-bum2-1")]
 
     fragments_stats = []
 
