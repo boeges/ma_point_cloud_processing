@@ -171,11 +171,11 @@ if __name__ == "__main__":
 
     
     # Save trajectory statistics
-    SAVE_STATISTICS = True
+    SAVE_STATISTICS = False
     # Save images of complete paths
-    SAVE_IMAGES = False
+    SAVE_IMAGES = True
     # Save images of each individual bucket (WARNING: Creates many images)
-    SAVE_BUCKET_IMAGES = False
+    SAVE_BUCKET_IMAGES = True
     # BINS_PER_T_BUCKET = T_BUCKET_LENGTH_MS # a bucket for every ms
     # For saving matplotlib images
     SAVE_IMAGE_DPI = 300

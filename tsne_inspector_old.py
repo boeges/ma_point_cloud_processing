@@ -44,12 +44,12 @@ ACTIVATIONS_DIR_FN = Path("../foldingnet2/snapshot/")
 # ACTIVATIONS_FILE = ACTIVATIONS_DIR_FN / "Reconstruct_insect_foldnet_gaussian_k20_e1600/features/activations_per_sample_2024-07-30_18-04.csv")
 # ACTIVATIONS_FILE = ACTIVATIONS_DIR_FN / "Reconstruct_insect_foldnet_gaussian_k20_e2000_feat512_pts4096_augment/features/activations_per_sample_2024-08-03_22-16.csv")
 # ACTIVATIONS_FILE = ACTIVATIONS_DIR_FN / "Reconstruct_insect_foldnet_gaussian_k40_e1600_feat1024_pts4096_augment_3/features/activations_per_sample_2024-08-09_16-49.csv")
-ACTIVATIONS_FILE = ACTIVATIONS_DIR_FN / "Reconstruct_insect_foldnet_gaussian_cls5_pts4096_k40_e1200_feat1024_augment_ds5rnd/features/activations_per_sample_2024-09-02_12-08.csv"
+ACTIVATIONS_FILE = ACTIVATIONS_DIR_FN / "foldnet_gaussian_cls5_pts4096_k40_e1200_feat1024_augment_ds5rnd/features/activations_per_sample.csv"
 
 
 # DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_3")
 # DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4")
-DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4_w_depth")
+# DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4_w_depth")
 DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5")
 # DATASET_DIR = Path("../../datasets/insect/100ms_2048pts_fps-ds_sor-nr_norm_shufflet_1")
 
@@ -551,11 +551,17 @@ class TsneInspector:
         # Doesnt really work!!!
         # face colors
         # array of tuple to 2d-array
-        self.fc = np.array([ *( bee.get_rgba_of_class_index(self.get_df().loc[:,"target_index"], 0.66).to_numpy() ) ])
+        self.fc = np.array([ *( bee.get_rgba_of_class_index(self.get_df().loc[:,"target_index"], 1.0).to_numpy() ) ])
         self.scatter.set_facecolor(self.fc)
         # edge colors
+        # self.ec = self.fc.copy()
+        # self.ec[:,3] = 1.0
+        # self.ec[self.selected_ind] = (0,0,0,1)
+        # self.scatter.set_edgecolor(self.ec)
+
+        # edge colors
         self.ec = self.fc.copy()
-        self.ec[:,3] = 1.0
+        self.ec[:,:] = 0.0 # set rgba to 0 (transparent)
         self.ec[self.selected_ind] = (0,0,0,1)
         self.scatter.set_edgecolor(self.ec)
 

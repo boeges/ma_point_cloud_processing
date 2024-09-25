@@ -109,7 +109,7 @@ if __name__ == "__main__":
     DOWNSAMPLE_METHOD = "farthest_point" # "random", "farthest_point"
     DOWNSAMPLE_METHOD_STR = "fps" if DOWNSAMPLE_METHOD=="farthest_point" else ("rnd" if DOWNSAMPLE_METHOD=="random" else "no")
 
-    NOISE_REDUCTION_METHOD = "none" # "none", "sor" = statistical outlier removal
+    NOISE_REDUCTION_METHOD = "sor" # "none", "sor" = statistical outlier removal
 
     # Normalize point clouds of each fragment
     NORMALIZE = True

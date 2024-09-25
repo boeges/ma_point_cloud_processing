@@ -62,9 +62,13 @@ DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shuff
 # DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5_diff")
 
 # DATASET_SPLIT_FILE = None
+DATASET_SPLIT_FILE = "train_test_split_7030.txt"
+# DATASET_SPLIT_FILE = "train_test_split_40shot.txt"
+# DATASET_SPLIT_FILE = "train_test_split_100shot.txt"
+
 # DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5/all_train_minstd3.txt")
 # DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4/train_test_split_40shot.txt")
-DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5/train_test_split_7030.txt")
+# DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5/train_test_split_7030.txt")
 # DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5/train_test_split_100shot.txt")
 # DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5/train_test_split_7030_minstd3.txt")
 # DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5/train_test_split_7030.txt")
@@ -178,6 +182,9 @@ class TsneInspector:
         df[['scene_id', 'instance_id', "fragment_index"]] = pd.DataFrame(df['frag_id'].tolist(), index=df.index)
 
         if self.split_file is not None:
+            if isinstance(self.split_file, str):
+                self.split_file = self.dataset_dir / self.split_file
+
             # find out split ("train"/"test") of each fragment
             # fid example: "hn-dra-1_16_6"
             train_fids, test_fids = bee.read_split_file(self.split_file)
