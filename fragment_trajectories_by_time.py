@@ -102,9 +102,9 @@ if __name__ == "__main__":
     T_BUCKET_LENGTH_MS = int(T_BUCKET_LENGTH / TIMESTEPS_PER_SECOND * 1000)
     # This is our target event count per fragment; Use "all" to keep original event count
     # EVENTS_PER_FRAGMENT = "all"
-    EVENTS_PER_FRAGMENT = 2048
+    EVENTS_PER_FRAGMENT = 4096
     # Min number of events a fragment needs before adding or removing events
-    MIN_EVENTS_COUNT = 1024
+    MIN_EVENTS_COUNT = 2048
 
     DOWNSAMPLE_METHOD = "farthest_point" # "random", "farthest_point"
     DOWNSAMPLE_METHOD_STR = "fps" if DOWNSAMPLE_METHOD=="farthest_point" else ("rnd" if DOWNSAMPLE_METHOD=="random" else "no")
@@ -184,6 +184,7 @@ if __name__ == "__main__":
     # trajectory_dirs = [d for d in TRAJECTORIES_BASE_DIR.glob("mb-bum2-1")]
 
     fragments_stats = []
+    fragments_with_enough_events = 0
 
     for trajectory_dir in trajectory_dirs:
         scene_id = trajectory_dir.name
@@ -257,6 +258,9 @@ if __name__ == "__main__":
                     current_fragment.events.append( new_row )
 
                 # -> If there are no events in the time frame of a fragment, the fragment wont be created. Is that a problem?
+                
+                if SAVE_PARTIAL_TRAJECTORIES and len(current_fragment.events) > 0:
+                    fragments.append(current_fragment)
 
             # print("Fragmented trajectory into", len(fragments), "fragments")
 
@@ -268,6 +272,8 @@ if __name__ == "__main__":
             # Throw away fragments with too few events
             if MIN_EVENTS_COUNT is not None:
                 fragments = [f for f in fragments if len(f.events) >= MIN_EVENTS_COUNT]
+            fragments_with_enough_events += len(fragments)
+            continue
 
             for fragment in fragments:
                 fragment.original_event_count = len(fragment.events)
@@ -369,6 +375,7 @@ if __name__ == "__main__":
             # for i, fragment in enumerate(fragments):
             #     print(f"- Fragment {fragment.index: >3}: evts:{len(fragment.events): >5}, orig_evts:{fragment.original_event_count: >5}, start:{fragment.start/T_SCALE/TIMESTEPS_PER_SECOND: >5.2f}s")
 
+            continue
             # Save fragmented trajectories as CSVs
             if OUTPUT_DIR_MODE == "parent_dir":
                 # save in parent dir of trajectory
@@ -402,6 +409,7 @@ if __name__ == "__main__":
             fragments_df.to_csv(OUTPUT_DATASET_DIR/"fragments.csv", index=False, header=True, decimal='.', sep=',', float_format='%.3f')
             print("Saved stats to", OUTPUT_DATASET_DIR/"fragments.csv")
 
+    print(f"Found {fragments_with_enough_events} fragments with >={MIN_EVENTS_COUNT} events.")
     print("Finished!")
 
 
