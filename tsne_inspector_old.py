@@ -66,7 +66,7 @@ FIGURES_DIR = Path("output/figures/projection_and_hist/tf100ms_tbr250_2")
 LABELS_OUTPUT_DIR = Path("output/instance_classes/tsne_inspector")
 # Dir with bbox annotations; Existing files will be overwritten!
 ANNOTATIONS_DIR = Path("output/video_annotations/3_classified")
-SHOW_TEST_AS_UNLABELED = True
+SHOW_TEST_AS_UNLABELED = False
 GROUP_TO_TRAJECORIES = False # True: Points are whole trajectories; false: Points are fragments
 
 
@@ -226,7 +226,7 @@ class TsneInspector:
 
     def create_tsne(self):
         # Create 2D t-sne
-        tsne = TSNE(n_components=2, init="pca", learning_rate="auto", random_state=0)
+        tsne = TSNE(n_components=2, init="pca", learning_rate="auto", random_state=0, perplexity=30)
         act_df = self.full_df.loc[:,"act_0":self.max_act_col].copy()
         tsne_result = tsne.fit_transform(act_df)
 

@@ -66,10 +66,10 @@ if __name__ == "__main__":
     DATETIME_STR_PREFIX = ('_'+DATETIME_STR) if ADD_TIME_TO_FILENAME else ''
     # If the csv contains a EVENTS_CSV_BB_CORNER_COL, 
     # add bbox events to the resulting fragments or remove those events
-    ADD_BB_EVENTS = False
+    ADD_BB_EVENTS = True
     SAVE_PARTIAL_TRAJECTORIES = True
-    OUTPUT_DIR_MODE = "dataset_dir" # "parent_dir", "dataset_dir"
-    SAVE_STATISTICS = True
+    OUTPUT_DIR_MODE = "parent_dir" # "parent_dir", "dataset_dir"
+    SAVE_STATISTICS = False
 
     ### DEBUG
     PRINT_PROGRESS_EVERY_N_PERCENT = 1
@@ -112,10 +112,10 @@ if __name__ == "__main__":
     NOISE_REDUCTION_METHOD = "sor" # "none", "sor" = statistical outlier removal
 
     # Normalize point clouds of each fragment
-    NORMALIZE = True
+    NORMALIZE = False
     NORMALIZE_STR = "_norm" if NORMALIZE else ""
     # Shuffle points of each fragment
-    SHUFFLE_T = True
+    SHUFFLE_T = False
     SHUFFLE_T_STR = "_shufflet" if SHUFFLE_T else ""
 
     ### Paths
@@ -164,7 +164,7 @@ if __name__ == "__main__":
             (OUTPUT_DATASET_DIR / cl).mkdir(exist_ok=True)
 
     # Find all trajectory dirs
-    trajectory_dirs = [d for d in TRAJECTORIES_BASE_DIR.glob("*")]
+    trajectory_dirs = [d for d in TRAJECTORIES_BASE_DIR.glob("hn-bee-1")] # *
 
     # Exclude dirs from EXCLUDE_SCENES_FROM_STATS
     trajectory_dirs2 = []
@@ -273,7 +273,6 @@ if __name__ == "__main__":
             if MIN_EVENTS_COUNT is not None:
                 fragments = [f for f in fragments if len(f.events) >= MIN_EVENTS_COUNT]
             fragments_with_enough_events += len(fragments)
-            continue
 
             for fragment in fragments:
                 fragment.original_event_count = len(fragment.events)
@@ -375,7 +374,6 @@ if __name__ == "__main__":
             # for i, fragment in enumerate(fragments):
             #     print(f"- Fragment {fragment.index: >3}: evts:{len(fragment.events): >5}, orig_evts:{fragment.original_event_count: >5}, start:{fragment.start/T_SCALE/TIMESTEPS_PER_SECOND: >5.2f}s")
 
-            continue
             # Save fragmented trajectories as CSVs
             if OUTPUT_DIR_MODE == "parent_dir":
                 # save in parent dir of trajectory

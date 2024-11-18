@@ -45,8 +45,8 @@ ACTIVATIONS_DIR_FN = Path("../foldingnet2/snapshot/")
 # ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls4A_e40_bs8_pts4096_split7030_ds4rnd/logs/activations_per_sample.csv"
 # DS 5
 # ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split40shot_ds5rnd/logs/activations_per_sample.csv"
-# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split100shot_ds5fps/logs/activations_per_sample.csv"
-ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split7030_ds5fps/logs/activations_per_sample.csv"
+ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split100shot_ds5fps/logs/activations_per_sample.csv"
+# ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split7030_ds5fps/logs/activations_per_sample.csv"
 # ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls5C_e40_bs8_pts4096_split7030_ds5rnd/logs/activations_per_sample.csv"
 # ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls6_e40_bs8_pts4096_split7030_ds5rnd_diff/logs/activations_per_sample.csv"
 # ACTIVATIONS_FILE = ACTIVATIONS_DIR_PN / "msg_cls6_e40_bs8_pts4096_split7030_minstd3_ds5fps/logs/activations_per_sample.csv"
@@ -62,9 +62,9 @@ DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shuff
 # DATASET_DIR = Path("../../datasets/insect/100ms_4096pts_rnd-ds_sor-nr_norm_shufflet_5_diff")
 
 # DATASET_SPLIT_FILE = None
-DATASET_SPLIT_FILE = "train_test_split_7030.txt"
+# DATASET_SPLIT_FILE = "train_test_split_7030.txt"
 # DATASET_SPLIT_FILE = "train_test_split_40shot.txt"
-# DATASET_SPLIT_FILE = "train_test_split_100shot.txt"
+DATASET_SPLIT_FILE = "train_test_split_100shot.txt"
 
 # DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_5/all_train_minstd3.txt")
 # DATASET_SPLIT_FILE = Path("../../datasets/insect/100ms_4096pts_fps-ds_sor-nr_norm_shufflet_4/train_test_split_40shot.txt")
@@ -83,7 +83,7 @@ LABELS_OUTPUT_DIR = Path("output/instance_classes/tsne_inspector")
 ANNOTATIONS_DIR = Path("output/video_annotations/3_classified")
 
 SHOW_TEST_AS_UNLABELED = False
-GROUP_TO_TRAJECORIES = False # True: Points are whole trajectories; false: Points are fragments
+GROUP_TO_TRAJECORIES = True # True: Points are whole trajectories; false: Points are fragments
 COL_USED_FOR_COLORS = "target_name" # "target_name" or "pred_name"
 
 
@@ -234,7 +234,7 @@ class TsneInspector:
 
     def create_tsne(self):
         # Create 2D t-sne
-        tsne = TSNE(n_components=2, init="pca", learning_rate="auto", random_state=0)
+        tsne = TSNE(n_components=2, init="pca", learning_rate="auto", random_state=0, perplexity=30)
         act_df = self.full_df.loc[:,self.act_cols].copy()
         tsne_result = tsne.fit_transform(act_df)
 

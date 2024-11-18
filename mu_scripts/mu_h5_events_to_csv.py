@@ -21,7 +21,7 @@ if __name__ == "__main__":
     CSV_OUTPUT_DIR = Path("output/mu_h5_to_csv")
 
     # Find all csv files in CSV_DIR
-    h5_filepaths = [file for file in H5_DIR.iterdir() if (file.is_file() and file.name.endswith(".h5"))]
+    h5_filepaths = [file for file in H5_DIR.iterdir() if (file.is_file() and file.name.endswith("3_m-h-h.h5"))] #  ONLY mu-3 !!!!!!!!!!!!!
     print(f"Found {len(h5_filepaths)} h5 files")
 
     for h5_filepath in h5_filepaths:

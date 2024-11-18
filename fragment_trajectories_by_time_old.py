@@ -63,12 +63,13 @@ if __name__ == "__main__":
     # 1: Create one subframe between two real frames (doubles frame count)
     SUBFRAME_COUNT = 1
 
-    ONLY_SAVE_XYTP = True
-    CREATE_BBOX_EVENTS = False
-    ADD_DATETIME_TO_OUTPUT_DIR = True
-    DATETIME_PREFIX = f"_{DATETIME_STR}" if ADD_DATETIME_TO_OUTPUT_DIR else ""
+    CREATE_BBOX_EVENTS = True
+    ADD_TIME_TO_FILENAME = True
 
     FRAMETIMES_CSV_DIR = None # Overwrite this with a path if used!
+
+   ############### PF #############
+    FPS = 60
 
     # Format from DarkLabel software: (frame_index, classname, instance_id, is_difficult, x, y, w, h) 
     #                                      0            1          2            3         4  5  6  7
@@ -83,75 +84,67 @@ if __name__ == "__main__":
     LABELS_CSV_H_COL = 7
     BB_IS_CONFIDENT_WHEN_MATCHES = "0" # is_difficult: 0(=confident)/1(=difficult)
 
-    # Format for events: (x, y, t (us), p)
-    EVENTS_CSV_HAS_HEADER = True
+    # Format for events: (x, y, t (us or ms), p)
+    EVENTS_CSV_HAS_HEADER = False
     EVENTS_CSV_X_COL = 0
     EVENTS_CSV_Y_COL = 1
     EVENTS_CSV_T_COL = 2
     EVENTS_CSV_P_COL = 3
 
+    
     FRAMETIMES_FILE_HAS_HEADER = True
 
-    # 2_separated, 3_classified
-    SEGMENTATION_STAGE = "3_classified"
-
-    OUTPUT_BASE_DIR = Path("output/extracted_trajectories") /  f"{SEGMENTATION_STAGE}{DATETIME_PREFIX}"
-
-   ############### PF #############
-    # FPS = 60
-
-    # # Paths
-    # EVENTS_CSV_DIR = Path("../../datasets/Insektenklassifikation")
-    # EVENTS_CSV_FILENAME = "{filestem}.csv"
-
-    # LABELS_CSV_DIR = Path("output/video_annotations") / SEGMENTATION_STAGE
-    # LABELS_CSV_FILENAME = "{filestem}.csv"
-
-    # FRAMETIMES_CSV_DIR = Path("output/video_frametimes")
-    # FRAMETIMES_CSV_FILENAME = "{filestem}_60fps_dvs_frametimes_v1.csv"
-
-    ##################################
-
-    ############### MB #############
-    # FPS = 60
-
-    # EVENTS_CSV_T_COL = 3
-    # EVENTS_CSV_P_COL = 2
-
-    # # 2_separated, 3_classified
-    # SEGMENTATION_STAGE = "3_classified"
-
-    # # Paths
-    # EVENTS_CSV_DIR = Path("../../aufnahmen/2024-08-06_libellen/exported_csv/") #  2024-07-18_bunter_garten, 2024-08-06_libellen, pf_wespen
-    # EVENTS_CSV_FILENAME = "{filestem}.csv"
-
-    # LABELS_CSV_DIR = Path("output/video_annotations") / SEGMENTATION_STAGE
-    # LABELS_CSV_FILENAME = "{filestem}.csv"
-
-    # OUTPUT_BASE_DIR = Path("output/extracted_trajectories") /  f"{SEGMENTATION_STAGE}{DATETIME_PREFIX}"
-
-    ##################################
-    
-    ############### MU #############
-    FPS = 100
-
-    EVENTS_CSV_T_COL = 2
-    EVENTS_CSV_P_COL = 3
-
     # Paths
-    EVENTS_CSV_DIR = Path("output/mu_h5_to_csv")
+    EVENTS_CSV_DIR = Path("../../datasets/Insektenklassifikation")
     EVENTS_CSV_FILENAME = "{filestem}.csv"
 
-    LABELS_CSV_DIR = Path("output/video_annotations") / SEGMENTATION_STAGE
+    LABELS_CSV_DIR = Path("output/video_annotations/3_classified")
     LABELS_CSV_FILENAME = "{filestem}.csv"
 
-    FRAMETIMES_CSV_DIR = Path("output/mu_h5_frametimes_to_csv")
-    FRAMETIMES_CSV_FILENAME = "{filestem}_frametimes.csv"
+    FRAMETIMES_CSV_DIR = Path("output/video_frametimes")
+    FRAMETIMES_CSV_FILENAME = "{filestem}_60fps_dvs_frametimes_v1.csv"
 
-    OUTPUT_BASE_DIR = Path("output/extracted_trajectories") / f"{SEGMENTATION_STAGE}{DATETIME_PREFIX}"
+    OUTPUT_BASE_DIR = Path("output/extracted_trajectories")
 
     ##################################
 
+    ############### MU #############
+    # FPS = 100
+
+    # # Format from Muenster dateset:   (frame_index, is_keyframe, class, confidence, left, top, width, height, center_x, center_y, instance_id) 
+    # #                                      0             1         2         3       4     5     6      7        8         9           10
+    # LABELS_CSV_HAS_HEADER = True
+    # LABELS_CSV_FRAME_COL = 0 # frame index
+    # LABELS_CSV_CLASS_COL = 2 # class name
+    # LABELS_CSV_ID_COL = 10 # instance id
+    # LABELS_CSV_IS_CONFIDENT_COL = 3
+    # LABELS_CSV_X_COL = 4
+    # LABELS_CSV_Y_COL = 5
+    # LABELS_CSV_W_COL = 6
+    # LABELS_CSV_H_COL = 7
+    # BB_IS_CONFIDENT_WHEN_MATCHES = "certain"
+
+    # # Format for events: (x, y, t (us), p)
+    # EVENTS_CSV_HAS_HEADER = True
+    # EVENTS_CSV_X_COL = 0
+    # EVENTS_CSV_Y_COL = 1
+    # EVENTS_CSV_T_COL = 2
+    # EVENTS_CSV_P_COL = 3
+
+    # READ_FRAMETIMES_FROM_FILE = True
+    # FRAMETIMES_FILE_HAS_HEADER = True
+
+    # # Paths
+    # EVENTS_CSV_DIR = Path("output/mu_h5_to_csv")
+    # EVENTS_CSV_FILENAME = "{filestem}.csv"
+    # LABELS_CSV_DIR = Path("output/mu_frame_labels_with_ids")
+    # LABELS_CSV_FILENAME = "{filestem}_annotation_instances.csv"
+    # OUTPUT_BASE_DIR = Path("output/extracted_trajectories")
+    # FRAMETIMES_CSV_DIR = Path("output/mu_h5_frametimes_to_csv")
+    # FRAMETIMES_CSV_FILENAME = "{filestem}_frametimes.csv"
+
+
+    ##################################
 
     WIDTH = 1280
     HEIGHT = 720
@@ -160,7 +153,7 @@ if __name__ == "__main__":
     # If timestamp in mikroseconds: -> mikroseconds per frame
     TIMESTEPS_PER_FRAME = (1 / FPS) * TIMESTEPS_PER_SECOND
     HALF_FRAME_TIME = TIMESTEPS_PER_FRAME // 2
-    T_SCALE = 1 # 0.002 is good
+    T_SCALE = 0.002 # 0.002 is good
     
 
     # Find all csv files in EVENTS_CSV_DIR
@@ -171,48 +164,31 @@ if __name__ == "__main__":
     # They need an extra file with frame_index to timestamp mapping
     v1_video_filestems = [
         "hn-bee-1",
-        "hn-but-2",
-        "mu-1",
-        "mu-2",
-        "mu-3",
-        "mu-4",
-        "mu-5",
-        "mu-6",
+        "hauptsächlichBienen1",
+        "vieleSchmetterlinge2"
     ]
 
     # Scenes
     filestems = [
-        ### PF
-        "hn-bee-1",
-        "hn-bee-2",
-        "hn-dra-1",
-        "hn-dra-2",
-        "hn-dra-3",
-        "hn-but-1",
-        "hn-but-2",
-        "hn-was-1",
-        "hn-was-2",
-        "hn-was-3",
-        "hn-was-4",
-        "hn-was-5",
-        "hn-was-6",
-        ### MU
-        # "mu-1",
-        # "mu-2",
-        "mu-3",
-        # "mu-4",
-        # "mu-5",
-        # "mu-6",
-        ### MB
-        "mb-bum1-1",
-        "mb-bum1-2",
-        "mb-bum1-3",
-        "mb-bum1-4",
-        "mb-bum1-5",
-        "mb-bum2-1",
-        "mb-bum2-2",
-        "mb-dra1-1",
-        "mb-dra2-1",
+        "hn-bee-1"
+        # PF
+        # "hauptsächlichBienen1",
+        # "hauptsächlichBienen2",
+        # "libellen1",
+        # "libellen2",
+        # "libellen3",
+        # "vieleSchmetterlinge1",
+        # "vieleSchmetterlinge2",
+        # "wespen1",
+        # "wespen2",
+        # "wespen3",
+        # MU
+        # "1_l-l-l",
+        # "2_l-h-l",
+        # "3_m-h-h",
+        # "4_m-m-h",
+        # "5_h-l-h",
+        # "6_h-h-h_filtered",
     ]
 
     print("Using t-scale:", T_SCALE)
@@ -248,8 +224,6 @@ if __name__ == "__main__":
                 # row (frame_index, timestamp)
                 for frametimes_row in frametimes_reader:
                     frametimes.append(float(frametimes_row[1]))
-        else:
-            print("NOT reading frametimes from file!")
 
 
         # Contains all labels per frame
@@ -353,10 +327,10 @@ if __name__ == "__main__":
                             label = frame.labels.get(instance_id, None)
                             if label is not None:
                                 subframe_label = Label(
-                                    int(prev_label.left * (1.0-pos) + label.left * pos),
-                                    int(prev_label.top * (1.0-pos) + label.top * pos),
-                                    int(prev_label.width * (1.0-pos) + label.width * pos),
-                                    int(prev_label.height * (1.0-pos) + label.height * pos),
+                                    int(prev_label.left * pos + label.left * (1.0-pos)),
+                                    int(prev_label.top * pos + label.top * (1.0-pos)),
+                                    int(prev_label.width * pos + label.width * (1.0-pos)),
+                                    int(prev_label.height * pos + label.height * (1.0-pos)),
                                     instance_id,
                                     label.is_confident
                                 )
@@ -411,8 +385,7 @@ if __name__ == "__main__":
                 # event structure: (x, y, p, t) or (x, y, t, p)
                 while event_row is not None:
                     event_x, event_y = int(event_row[EVENTS_CSV_X_COL]), int(event_row[EVENTS_CSV_Y_COL])
-                    event_timestamp = int(event_row[EVENTS_CSV_T_COL])
-                    event_p = int(event_row[EVENTS_CSV_P_COL])
+                    event_timestamp = float(event_row[EVENTS_CSV_T_COL])
 
                     # Is event between prev_frame and frame?
                     # (Subtract HALF_FRAME_TIME from frame start time, so that the time-center of each
@@ -442,17 +415,10 @@ if __name__ == "__main__":
                                 instance_trajectory.first_timestamp = event_timestamp
 
                             # shift (to zero) and scale timestamp coordinate
-                            if T_SCALE != 1:
-                                event_t_scaled = (event_timestamp - instance_trajectory.first_timestamp) * T_SCALE
-                            else:
-                                event_t_scaled = event_timestamp - instance_trajectory.first_timestamp
+                            event_t_scaled = (event_timestamp - instance_trajectory.first_timestamp) * T_SCALE
                             is_confident = 1 if label.is_confident else 0
                             event_color = EVENT_COLOR if label.is_confident else UNCONFIDENT_COLOR
-                            if ONLY_SAVE_XYTP:
-                                instance_trajectory.events.append( (event_x, event_y, event_t_scaled, event_p) )
-                            else:
-                                # without p
-                                instance_trajectory.events.append( (event_x, event_y, event_t_scaled, *event_color, is_confident, prev_frame.index, -1) )
+                            instance_trajectory.events.append( (event_x, event_y, event_t_scaled, *event_color, is_confident) )
 
                     event_row = next(event_reader, None)
 
@@ -468,16 +434,16 @@ if __name__ == "__main__":
 
                             # at start of frame
                             frame_start = ((prev_frame.start - instance_trajectory.first_timestamp) * T_SCALE)
-                            instance_trajectory.events.append( (label.left, label.top, frame_start, *points_color, is_confident, prev_frame.index, 0b000) )
-                            instance_trajectory.events.append( (label.left+label.width, label.top, frame_start, *points_color, is_confident, prev_frame.index, 0b001) )
-                            instance_trajectory.events.append( (label.left, label.top+label.height, frame_start, *points_color, is_confident, prev_frame.index, 0b010) )
-                            instance_trajectory.events.append( (label.left+label.width, label.top+label.height, frame_start, *points_color, is_confident, prev_frame.index, 0b011) )
+                            instance_trajectory.events.append( (label.left, label.top, frame_start, *points_color, is_confident) )
+                            instance_trajectory.events.append( (label.left+label.width, label.top, frame_start, *points_color, is_confident) )
+                            instance_trajectory.events.append( (label.left, label.top+label.height, frame_start, *points_color, is_confident) )
+                            instance_trajectory.events.append( (label.left+label.width, label.top+label.height, frame_start, *points_color, is_confident) )
                             # at end of frame (start of next frame)
                             frame_end = ((frame.start - instance_trajectory.first_timestamp) * T_SCALE)
-                            instance_trajectory.events.append( (label.left, label.top, frame_end, *points_color, is_confident, prev_frame.index, 0b100) )
-                            instance_trajectory.events.append( (label.left+label.width, label.top, frame_end,*points_color, is_confident, prev_frame.index, 0b101) )
-                            instance_trajectory.events.append( (label.left, label.top+label.height, frame_end, *points_color, is_confident, prev_frame.index, 0b110) )
-                            instance_trajectory.events.append( (label.left+label.width, label.top+label.height, frame_end, *points_color, is_confident, prev_frame.index, 0b111) )
+                            instance_trajectory.events.append( (label.left, label.top, frame_end, *points_color, is_confident) )
+                            instance_trajectory.events.append( (label.left+label.width, label.top, frame_end,*points_color, is_confident) )
+                            instance_trajectory.events.append( (label.left, label.top+label.height, frame_end, *points_color, is_confident) )
+                            instance_trajectory.events.append( (label.left+label.width, label.top+label.height, frame_end, *points_color, is_confident) )
 
                             label._current_bb_index += 1
 
@@ -497,27 +463,24 @@ if __name__ == "__main__":
                     print("Skipping trajectory", id, ". No points!")
                     continue
                 
+                bbox_filename_part = "_bbox" if CREATE_BBOX_EVENTS else ""
+                datetime_filename_part = ("_"+DATETIME_STR) if ADD_TIME_TO_FILENAME else ""
+
                 output_dir_path = (OUTPUT_BASE_DIR / "_with_bboxes") if CREATE_BBOX_EVENTS else OUTPUT_BASE_DIR
-                output_dir_path = output_dir_path / f"{filestem}"
+                output_dir_path = output_dir_path / f"{filestem}_trajectories{bbox_filename_part}{datetime_filename_part}"
                 output_dir_path.mkdir(parents=True, exist_ok=True)
 
                 output_file_path = output_dir_path / f"{id}_{trajectory.cla}_pts{len(trajectory.events)}_start{int(trajectory.first_timestamp)}.csv"
 
                 with open(output_file_path, 'w', newline='') as file:
                     writer = csv.writer(file)
-                    if ONLY_SAVE_XYTP:
-                        writer.writerow(["x", "y", "t", "p"])
-                        writer.writerows(trajectory.events)
-                    else:
-                        # bb_corner_index: -1: normal event; 0-7 corner indices as 0b000 with zyx order; 0=in front; 1=behind
-                        writer.writerow(["x", "y", "t", "r", "g", "b", "is_confident", "bb_frame_index", "bb_corner_index"])
-                        writer.writerows(trajectory.events)
+                    writer.writerow(["x", "y", "t", "r", "g", "b", "is_confident"])
+                    writer.writerows(trajectory.events)
 
                 print(f"Created {output_file_path}!")
 
     print("Finished!")
 
-                
 
 
 
